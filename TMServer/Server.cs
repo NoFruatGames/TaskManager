@@ -12,10 +12,12 @@ namespace TMServer
     internal class Server :IDisposable
     {
         private ConnectionHandler connectionHandler;
+        private List<ClientHandler> clients;
         public Server(string host, int port)
         {
             connectionHandler = new ConnectionHandler(new IPEndPoint(IPAddress.Parse(host), port));
             connectionHandler.ClientConnected += ConnectionHandler_ClientConnected; ;
+            clients = new List<ClientHandler>();
         }
         public void Start()
         {
@@ -28,7 +30,16 @@ namespace TMServer
                 listenClientsThread.Start();
                 while (true)
                 {
-
+                    Console.Write(">");
+                    string? command = Console.ReadLine();
+                    if(command == "show clients")
+                    {
+                        foreach (var c in clients)
+                        {
+                            Console.WriteLine(c);
+                        }
+                        Console.WriteLine("-----------------------------------------");
+                    }
                 }
             }
             catch (Exception)
@@ -42,15 +53,31 @@ namespace TMServer
         }
         private void ConnectionHandler_ClientConnected(TcpClient obj)
         {
-            Console.WriteLine("Client connected");
-            Stream stream = obj.GetStream();
-            StreamWriter writer = new StreamWriter(stream);
-            writer.WriteLine("response from server");
-            writer.Flush();
+            ClientHandler client = new ClientHandler(obj);
+            client.ClientDisconnected += Client_ClientDisconnected;
+            client.CreateAccountRequest += Client_CreateAccountRequest;
+            clients.Add(client);
+            Thread reciveThread = new Thread(client.HandleClient);
+            reciveThread.Start();
         }
+
+        private CreateAccountResult Client_CreateAccountRequest(TransferDataTypes.Payloads.PayloadAccountInfo payload)
+        {
+            return CreateAccountResult.Success;
+        }
+
+        private void Client_ClientDisconnected(ClientHandler obj)
+        {
+            clients.Remove(obj);
+        }
+
         public void Dispose()
         {
             connectionHandler.Dispose();
+            foreach(var c in clients)
+            {
+                c.Dispose();
+            }
         }
     }
     

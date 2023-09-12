@@ -1,9 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Newtonsoft.Json;
+using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using TransferDataTypes.Payloads;
+using TransferDataTypes;
 
 namespace TMServerLinker
 {
@@ -11,7 +13,7 @@ namespace TMServerLinker
     {
         public event Action<string>? OnMessageReceived;
         private TcpClient? Server { get; set; }
-        private StreamReader? Reader { get; set; }
+        private NetworkStream Stream { get; set; }
         private StreamWriter? Writer { get; set; }
         private readonly string ServerHost;
         private readonly int ServerPort;
@@ -37,7 +39,7 @@ namespace TMServerLinker
                     Server.Connect(ServerHost, ServerPort);
                     lock (locker)
                     {
-                        Reader = new StreamReader(Server.GetStream());
+                        Stream = Server.GetStream();
                         Writer = new StreamWriter(Server.GetStream());
                         IsConnected = true;
                     }
@@ -57,14 +59,15 @@ namespace TMServerLinker
         {
             try
             {
-                while (IsConnected && Server != null && Server.Connected && Reader != null)
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+
+                while ((bytesRead = Stream.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    string? json = Reader.ReadLine();
+                    string json = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                     if (json != null)
                     {
-                        //Message? message = JsonConvert.DeserializeObject<Message>(json);
-                        //if (message != null) OnMessageReceived?.Invoke(message);
-                        Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Message from server: {json}");
+                        OnMessageReceived?.Invoke(json);
                     }
                 }
             }
@@ -75,12 +78,28 @@ namespace TMServerLinker
         }
         public void Dispose()
         {
-            Server?.Close();
-            Server?.Dispose();
-            Reader?.Close();
-            Reader?.Dispose();
-            Writer?.Close();
-            Writer?.Dispose();
+            lock (locker)
+            {
+                Server?.Close();
+                Server?.Dispose();
+                Stream?.Close();
+                Stream?.Dispose();
+                Writer?.Close();
+                Writer?.Dispose();
+            }
+
+        }
+        public void SendMessage(string message)
+        {
+            try
+            {
+                Writer?.Write(message);
+                Writer?.Flush();
+            }
+            catch(Exception ex) 
+            {
+                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Writting data error: {ex.Message}");
+            }
         }
     }
 }

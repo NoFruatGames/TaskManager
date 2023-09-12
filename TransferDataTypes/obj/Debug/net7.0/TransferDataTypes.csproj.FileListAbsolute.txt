@@ -1,0 +1,11 @@
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\bin\Debug\net7.0\TransferDataTypes.deps.json
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\bin\Debug\net7.0\TransferDataTypes.dll
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\bin\Debug\net7.0\TransferDataTypes.pdb
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\TransferDataTypes.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\TransferDataTypes.AssemblyInfoInputs.cache
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\TransferDataTypes.AssemblyInfo.cs
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\TransferDataTypes.csproj.CoreCompileInputs.cache
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\TransferDataTypes.dll
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\refint\TransferDataTypes.dll
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\TransferDataTypes.pdb
+C:\Users\Admin\Desktop\TaskManager\TransferDataTypes\obj\Debug\net7.0\ref\TransferDataTypes.dll

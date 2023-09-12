@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMServer", "TMServer\TMServer.csproj", "{7EFE2914-A55E-4555-A798-955B2089F8E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TMServer", "TMServer\TMServer.csproj", "{7EFE2914-A55E-4555-A798-955B2089F8E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleClient", "ConsoleClient\ConsoleClient.csproj", "{8DBC7257-B465-47F2-A710-5E93628B2ED5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleClient", "ConsoleClient\ConsoleClient.csproj", "{8DBC7257-B465-47F2-A710-5E93628B2ED5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMServerLinker", "TMServerLinker\TMServerLinker.csproj", "{03A350D9-2A61-49C2-B5F9-551139B21A78}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TMServerLinker", "TMServerLinker\TMServerLinker.csproj", "{03A350D9-2A61-49C2-B5F9-551139B21A78}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TransferDataTypes", "TransferDataTypes\TransferDataTypes.csproj", "{1106DD66-480C-413F-939B-3D6F7D6AD9D4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{03A350D9-2A61-49C2-B5F9-551139B21A78}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03A350D9-2A61-49C2-B5F9-551139B21A78}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03A350D9-2A61-49C2-B5F9-551139B21A78}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1106DD66-480C-413F-939B-3D6F7D6AD9D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1106DD66-480C-413F-939B-3D6F7D6AD9D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1106DD66-480C-413F-939B-3D6F7D6AD9D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1106DD66-480C-413F-939B-3D6F7D6AD9D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
