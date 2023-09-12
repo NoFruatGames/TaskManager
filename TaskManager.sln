@@ -5,6 +5,10 @@ VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMServer", "TMServer\TMServer.csproj", "{7EFE2914-A55E-4555-A798-955B2089F8E3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleClient", "ConsoleClient\ConsoleClient.csproj", "{8DBC7257-B465-47F2-A710-5E93628B2ED5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TMServerLinker", "TMServerLinker\TMServerLinker.csproj", "{03A350D9-2A61-49C2-B5F9-551139B21A78}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{7EFE2914-A55E-4555-A798-955B2089F8E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7EFE2914-A55E-4555-A798-955B2089F8E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7EFE2914-A55E-4555-A798-955B2089F8E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DBC7257-B465-47F2-A710-5E93628B2ED5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DBC7257-B465-47F2-A710-5E93628B2ED5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DBC7257-B465-47F2-A710-5E93628B2ED5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DBC7257-B465-47F2-A710-5E93628B2ED5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03A350D9-2A61-49C2-B5F9-551139B21A78}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03A350D9-2A61-49C2-B5F9-551139B21A78}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03A350D9-2A61-49C2-B5F9-551139B21A78}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03A350D9-2A61-49C2-B5F9-551139B21A78}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
