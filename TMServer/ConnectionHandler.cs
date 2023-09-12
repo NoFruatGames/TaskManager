@@ -49,10 +49,13 @@ namespace TM_Server
             }
             
         }
-
         public void Dispose()
         {
-            Listener.Stop();
+            lock(locker)
+            {
+                Listener.Stop();
+            }
+
         }
     }
 }
