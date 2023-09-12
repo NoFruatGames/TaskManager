@@ -1,0 +1,7 @@
+.vs/
+ConsoleClient/bin/
+ConsoleClient/obj/
+TMServer/bin/
+TMServer/obj/
+TMServerLinker/bin/
+TMServerLinker/obj/
