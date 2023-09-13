@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace TransferDataTypes
 {
-    public enum MessageType
+    public enum MessageAction
     {
-        None, Request, Response, UpdateClient
+        None, RegisterAccount, LoginToAccount
     }
 }

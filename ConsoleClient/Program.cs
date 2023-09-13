@@ -16,7 +16,8 @@ try
             string? password = Console.ReadLine();
             Console.Write("Email: ");
             string? email = Console.ReadLine();
-            server.RegisterAccount(new Profile() { Username = login, Password = password, Email = email });
+            _ = Task.Run(() => server.RegisterAccount(new Profile() { Username = login, Password = password, Email = email }));
+            
         }
     }
 }

@@ -15,17 +15,11 @@ namespace TMServerLinker
         public TMServer(string serverHost="192.168.0.129", int serverPort = 4980)
         {
             connection = new ConnectionHandler(serverHost, serverPort);
-            connection.OnMessageReceived += Connection_OnMessageReceived;
-            connectionThread = new Thread(connection.ConnectToServer);
+            connectionThread = new Thread(()=>connection.ConnectToServerAsync());
             connectionThread.Name = "connection thread";
             connectionThread.Start();
         }
 
-        private void Connection_OnMessageReceived(string json)
-        {
-            Message? message = JsonConvert.DeserializeObject<Message>(json);
-            Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Message from server: {json}");
-        }
 
         public void Dispose()
         {
@@ -35,7 +29,8 @@ namespace TMServerLinker
         {
             Message message = new Message()
             {
-                Type = MessageType.RegisterAccount,
+                Type = MessageType.Request,
+                Action = MessageAction.RegisterAccount,
                 Payload = new PayloadAccountInfo()
                 {
                     Username = profile.Username,
@@ -43,10 +38,9 @@ namespace TMServerLinker
                     Email = profile.Email,
                 }
             };
-            string json = JsonConvert.SerializeObject(message);
-            Task.Factory.StartNew(() => connection.SendMessage(json));
-            
-           // _ = Task.Run(() => );
+            connection.AddMessageToQueue(message);
+            Message response = connection.GetResponseFromRequest(message); //блокирующий вызов
+            Console.WriteLine(response.Payload.ToString());
         }
     }
 }

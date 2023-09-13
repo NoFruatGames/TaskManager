@@ -63,7 +63,7 @@ namespace TMServer
                     Message? message = JsonConvert.DeserializeObject<Message>(json);
                     if (message != null)
                     {
-                        if (message.Type == MessageType.RegisterAccount && message.Payload != null)
+                        if (message.Action == MessageAction.RegisterAccount && message.Type==MessageType.Request && message.Payload != null)
                         {
                             Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Create account request from client {id}");
                             message.Payload = JsonConvert.DeserializeObject<PayloadAccountInfo>(message.Payload.ToString());
@@ -72,7 +72,8 @@ namespace TMServer
                             {
                                 Message response = new Message()
                                 {
-                                    Type = MessageType.RegisterAccount,
+                                    Action = MessageAction.RegisterAccount,
+                                    Type = MessageType.Response
                                 };
                                 if (result == CreateAccountResult.Success) response.Payload = PayloadCreateAccountResult.Success;
                                 string jsonResult = JsonConvert.SerializeObject(response);
@@ -81,11 +82,17 @@ namespace TMServer
                         }
                     }
                 }
-            }catch(Exception ex)
+            }
+            catch(IOException ex)
             {
+                Console.WriteLine(ex.Message);
                 Dispose();
                 ClientDisconnected?.Invoke(this);
                 Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {id} has disconnected");
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {id} error: {ex.Message}");
             }
         }
         private void SendMessage(string message)

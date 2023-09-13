@@ -38,7 +38,7 @@ namespace TMServer
                         {
                             Console.WriteLine(c);
                         }
-                        Console.WriteLine("-----------------------------------------");
+                        Console.WriteLine("-------------------------------------------------------------------------------");
                     }
                 }
             }
@@ -63,6 +63,7 @@ namespace TMServer
 
         private CreateAccountResult Client_CreateAccountRequest(TransferDataTypes.Payloads.PayloadAccountInfo payload)
         {
+            Thread.Sleep(10000);
             return CreateAccountResult.Success;
         }
 
