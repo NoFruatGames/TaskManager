@@ -2,6 +2,6 @@
 {
     public enum PayloadCreateAccountResult
     {
-        Success,
+        Success, UsernameAlreadyExist, ServerError
     }
 }

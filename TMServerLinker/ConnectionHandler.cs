@@ -80,12 +80,7 @@ namespace TMServerLinker
                         if (message != null)
                         {
                             if (message.Type == MessageType.Response && ResponseMessageReceived != null) ResponseMessageReceived.Invoke(message);
-                            else if (message.Type == MessageType.UpdateClient && UpdateMessageReceived != null)
-                            {
-                                Thread updateThread = new Thread(() => UpdateMessageReceived.Invoke(message));
-                                updateThread.Name = $"update message {message.Id} handler";
-                                updateThread.Start();
-                            }
+                            else if (message.Type == MessageType.UpdateClient && UpdateMessageReceived != null) UpdateMessageReceived.Invoke(message);
                         }
                     }
                 }
@@ -126,7 +121,7 @@ namespace TMServerLinker
                     if (Requests.Count - 1 >= 0)
                     {
                         Message request = Requests.Dequeue();
-                       string json = request.Serialize();
+                        string json = request.Serialize();
                         if (!string.IsNullOrEmpty(json))
                         {
                             await Writer?.WriteLineAsync(json);

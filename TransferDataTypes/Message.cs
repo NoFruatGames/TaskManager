@@ -23,7 +23,7 @@ namespace TransferDataTypes
             try
             {
                 if (Payload == null) { return default; }
-                T? result = JsonConvert.DeserializeObject<T>(Payload.ToString()); ;
+                T? result = JsonConvert.DeserializeObject<T>(Payload.ToString());
                 Payload = result;
                 return result;
             }

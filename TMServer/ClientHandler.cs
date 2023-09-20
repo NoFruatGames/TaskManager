@@ -19,10 +19,9 @@ namespace TMServer
         private int clientPort=-1;
         private readonly object locker = new object();
 
-        public delegate R RequestWithResponse<P, R>(P payload);
+        public delegate Task MessageWithSender(Message message,ClientHandler sender);
         public event Action<ClientHandler>? ClientDisconnected;
-        public event RequestWithResponse<PayloadAccountInfo?, CreateAccountResult>? CreateAccountRequest;
-        
+        public event MessageWithSender? OnRequestRecived;
 
         public ClientHandler(TcpClient client) { 
             this.client = client;
@@ -67,24 +66,9 @@ namespace TMServer
                     Message? message = Message.Deserialize(json ?? string.Empty);
                     if (message != null)
                     {
-                        if (message.Action == MessageAction.RegisterAccount && message.Type == MessageType.Request && message.Payload != null)
+                        if (message.Type == MessageType.Request)
                         {
-                            Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Create account request from client {id}");
-                            PayloadAccountInfo? accountInfo = message.DeserializePayload<PayloadAccountInfo>();
-                            CreateAccountResult? result = CreateAccountRequest?.Invoke(accountInfo);
-                            if (result != null)
-                            {
-                                Message response = new Message()
-                                {
-                                    Action = MessageAction.RegisterAccount,
-                                    Type = MessageType.Response,
-                                    Id = message.Id,
-                                };
-                                if (result == CreateAccountResult.Success) response.Payload = PayloadCreateAccountResult.Success;
-                                string responseJson = response.Serialize();
-                                await SendMessageAsync(responseJson);
-                                
-                            }
+                            await OnRequestRecived?.Invoke(message, this);
                         }
                     }
                 }
@@ -100,7 +84,7 @@ namespace TMServer
                 Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {id} error: {ex.Message}");
             }
         }
-        private async Task SendMessageAsync(string  message)
+        public async Task SendMessageAsync(string  message)
         {
             try
             {
@@ -109,7 +93,6 @@ namespace TMServer
             }
             catch(IOException)
             {
-                Dispose();
                 ClientDisconnected?.Invoke(this);
             }
             catch(Exception ex)
@@ -124,8 +107,5 @@ namespace TMServer
         }
     }
     
-    internal enum CreateAccountResult
-    {
-        Success
-    };
+
 }

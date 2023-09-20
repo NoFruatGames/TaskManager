@@ -24,12 +24,12 @@ namespace TMServerLinker
         }
         List<Message> responses;
         //Блокирующий метод
-        private Message? GetResponseById(int id, int atemptsCount=30)
+        private Message? GetResponseById(int id, int waitingSeconds= 15)
         {
             int failCount = 0;
             while (true)
             {
-                if (failCount >= atemptsCount)
+                if (failCount >= waitingSeconds * 2 && waitingSeconds > 0)
                     return null;
                 for(int i = 0; i < responses.Count; ++i)
                 {
@@ -38,8 +38,12 @@ namespace TMServerLinker
                         return responses[i];
                     }
                 }
-                failCount += 1;
-                Thread.Sleep(500);
+                if(waitingSeconds > 0)
+                {
+                    failCount += 1;
+                    Thread.Sleep(500);
+                }
+
             }
         }
         private void Connection_ResponseMessageReceived(Message obj)
@@ -78,10 +82,10 @@ namespace TMServerLinker
                 }
             };
             connection.AddMessageToQueue(message);
-            Message? response = GetResponseById(message.Id);
+            Message? response = GetResponseById(message.Id, -1);
             if(response != null)
             {
-                Console.WriteLine(response?.Payload?.ToString());
+                Console.WriteLine(response?.DeserializePayload<PayloadCreateAccountResult>().ToString());
             }
             else
             {
