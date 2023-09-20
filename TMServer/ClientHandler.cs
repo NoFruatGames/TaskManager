@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using TransferDataTypes.Payloads;
 using TransferDataTypes;
-using Newtonsoft.Json;
 
 namespace TMServer
 {
@@ -14,6 +13,7 @@ namespace TMServer
         private TcpClient client;
         private NetworkStream stream;
         private StreamWriter writer;
+        private StreamReader reader;
         private string id;
         private string clientIP=string.Empty;
         private int clientPort=-1;
@@ -21,13 +21,14 @@ namespace TMServer
 
         public delegate R RequestWithResponse<P, R>(P payload);
         public event Action<ClientHandler>? ClientDisconnected;
-        public event RequestWithResponse<PayloadAccountInfo, CreateAccountResult>? CreateAccountRequest;
+        public event RequestWithResponse<PayloadAccountInfo?, CreateAccountResult>? CreateAccountRequest;
         
 
         public ClientHandler(TcpClient client) { 
             this.client = client;
             stream = client.GetStream();
             this.writer = new StreamWriter(client.GetStream());
+            this.reader = new StreamReader(client.GetStream());
             id = Guid.NewGuid().ToString();
             if(client.Client.RemoteEndPoint is IPEndPoint endPoint)
             {
@@ -38,46 +39,51 @@ namespace TMServer
         }
         public void Dispose()
         {
-            lock(locker)
+            try
             {
-                client.Close();
-                client.Dispose();
-                stream.Close();
-                stream.Dispose();
-                writer.Close();
-                writer.Dispose();
+                lock (locker)
+                {
+                    client.Close();
+                    client.Dispose();
+                    stream.Close();
+                    stream.Dispose();
+                    writer.Close();
+                    writer.Dispose();
+                }
             }
+            catch { }
+            
 
         }
-        public void HandleClient()
+        public async Task HandleClient()
         {
             Thread.CurrentThread.Name = id + " client handler";
             try
             {
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-
-                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                while (true)
                 {
-                    string json = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    Message? message = JsonConvert.DeserializeObject<Message>(json);
+
+                    string? json = await reader.ReadLineAsync();
+                    Message? message = Message.Deserialize(json ?? string.Empty);
                     if (message != null)
                     {
-                        if (message.Action == MessageAction.RegisterAccount && message.Type==MessageType.Request && message.Payload != null)
+                        if (message.Action == MessageAction.RegisterAccount && message.Type == MessageType.Request && message.Payload != null)
                         {
                             Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Create account request from client {id}");
-                            message.Payload = JsonConvert.DeserializeObject<PayloadAccountInfo>(message.Payload.ToString());
-                            CreateAccountResult? result = CreateAccountRequest?.Invoke((PayloadAccountInfo)message.Payload);
+                            PayloadAccountInfo? accountInfo = message.DeserializePayload<PayloadAccountInfo>();
+                            CreateAccountResult? result = CreateAccountRequest?.Invoke(accountInfo);
                             if (result != null)
                             {
                                 Message response = new Message()
                                 {
                                     Action = MessageAction.RegisterAccount,
-                                    Type = MessageType.Response
+                                    Type = MessageType.Response,
+                                    Id = message.Id,
                                 };
                                 if (result == CreateAccountResult.Success) response.Payload = PayloadCreateAccountResult.Success;
-                                string jsonResult = JsonConvert.SerializeObject(response);
-                                SendMessage(jsonResult);
+                                string responseJson = response.Serialize();
+                                await SendMessageAsync(responseJson);
+                                
                             }
                         }
                     }
@@ -86,7 +92,6 @@ namespace TMServer
             catch(IOException ex)
             {
                 Console.WriteLine(ex.Message);
-                Dispose();
                 ClientDisconnected?.Invoke(this);
                 Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {id} has disconnected");
             }
@@ -95,18 +100,21 @@ namespace TMServer
                 Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {id} error: {ex.Message}");
             }
         }
-        private void SendMessage(string message)
+        private async Task SendMessageAsync(string  message)
         {
             try
             {
-                writer.Write(message);
-                writer.Flush();
-            }catch(Exception ex)
+                await writer.WriteLineAsync(message);
+                await writer.FlushAsync();
+            }
+            catch(IOException)
             {
-                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: sending data to client {id} error: {ex.Message}");
                 Dispose();
                 ClientDisconnected?.Invoke(this);
-
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: sending data to client {id} error: {ex.Message}");
             }
 
         }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Net;
-namespace TM_Server
+namespace TMServer
 {
     internal class ConnectionHandler :IDisposable
     {

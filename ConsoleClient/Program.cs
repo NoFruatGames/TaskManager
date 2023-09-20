@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System;
 using TMServerLinker;
-using TMServer server = new TMServer();
+using TMClient server = new TMClient();
 try
 {
     while (true)

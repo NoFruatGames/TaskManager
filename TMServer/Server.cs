@@ -5,8 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using TM_Server;
-
 namespace TMServer
 {
     internal class Server :IDisposable
@@ -57,11 +55,11 @@ namespace TMServer
             client.ClientDisconnected += Client_ClientDisconnected;
             client.CreateAccountRequest += Client_CreateAccountRequest;
             clients.Add(client);
-            Thread reciveThread = new Thread(client.HandleClient);
+            Thread reciveThread = new Thread(()=>client.HandleClient());
             reciveThread.Start();
         }
 
-        private CreateAccountResult Client_CreateAccountRequest(TransferDataTypes.Payloads.PayloadAccountInfo payload)
+        private CreateAccountResult Client_CreateAccountRequest(TransferDataTypes.Payloads.PayloadAccountInfo? payload)
         {
             Thread.Sleep(10000);
             return CreateAccountResult.Success;
@@ -69,16 +67,22 @@ namespace TMServer
 
         private void Client_ClientDisconnected(ClientHandler obj)
         {
+            try { obj.Dispose(); } catch { }      
             clients.Remove(obj);
         }
 
         public void Dispose()
         {
-            connectionHandler.Dispose();
-            foreach(var c in clients)
+            try
             {
-                c.Dispose();
+                connectionHandler.Dispose();
+                foreach (var c in clients)
+                {
+                    c.Dispose();
+                }
             }
+            catch { }
+
         }
     }
     
