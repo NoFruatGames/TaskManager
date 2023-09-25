@@ -1,12 +1,16 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System;
 using TMServerLinker;
-using TMClient server = new TMClient();
+using TMServerLinker.ConnectionHandlers;
+TMClient server = new(new TCPConnectionHandler("192.168.0.129",4980),
+    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NoFruatINC", "TaskManager", "Client")
+    );
 try
 {
     while (true)
     {
         Console.WriteLine("1) Register account");
+        Console.WriteLine("2) Login to account");
         int num = int.Parse(Console.ReadLine());
         if (num == 1)
         {
@@ -18,6 +22,13 @@ try
             string? email = Console.ReadLine();
             _ = Task.Run(() => server.RegisterAccount(new Profile() { Username = login, Password = password, Email = email }));
             
+        } else if(num == 2)
+        {
+            Console.Write("Login: ");
+            string? login = Console.ReadLine();
+            Console.Write("Password: ");
+            string? password = Console.ReadLine();
+            _ = Task.Run(() => server.LoginToAccount(new Profile() { Username = login, Password = password,}));
         }
     }
 }

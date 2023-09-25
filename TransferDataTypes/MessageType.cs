@@ -8,6 +8,6 @@ namespace TransferDataTypes
 {
     public enum MessageType
     {
-        None, Request, Response, UpdateClient
+        None, Request, Response, Update
     }
 }

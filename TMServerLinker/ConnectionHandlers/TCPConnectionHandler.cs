@@ -1,39 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
-using TransferDataTypes.Payloads;
 using TransferDataTypes;
-using System.Threading;
 
-namespace TMServerLinker
+namespace TMServerLinker.ConnectionHandlers
 {
-    internal class ConnectionHandler : IDisposable
+    public class TCPConnectionHandler : ConnectionHandler
     {
         private TcpClient? Server { get; set; }
         private NetworkStream Stream { get; set; } = null!;
         private StreamWriter Writer { get; set; } = null!;
-        private StreamReader Reader { get; set; } = null!; 
-        private Queue<Message> Requests { get; set; }
-        private readonly string ServerHost;
-        private readonly int ServerPort;
-        private readonly object locker = new object();
-        public bool IsConnected { get; private set; } = false;
-        Thread reciveThread = null!;
-        Thread sendThread = null!;
+        private StreamReader Reader { get; set; } = null!;
 
-        public event Action<Message>? UpdateMessageReceived;
-        public event Action<Message>? ResponseMessageReceived;
+        internal override event Action<Message>? UpdateMessageRecived;
+        internal override event Action<Message>? ResponseMessageRecived;
+        internal override event Action<Message>? InitSessionMessageRecived;
+        internal override event Action? OnConnectionOpened;
+        internal override event Action? OnConnectionClosed;
 
-
-
-        public ConnectionHandler(string serverHost = "192.168.0.129", int serverPort = 4980)
+        public TCPConnectionHandler(string serverHost = "192.168.0.129", int serverPort = 4980):base(serverHost, serverPort)
         {
-            ServerHost = serverHost;
-            ServerPort = serverPort;
-            Requests = new Queue<Message>();
+
         }
 
-        public async Task ConnectToServerAsync()
+        internal override async Task ConnectToServerAsync()
         {
             while (true)
             {
@@ -42,6 +35,7 @@ namespace TMServerLinker
                     if (Server != null && Server.Connected == true && IsConnected == true) continue;
                     Dispose();
                     IsConnected = false;
+                    OnConnectionClosed?.Invoke();
                     Server = new TcpClient();
                     await Server.ConnectAsync(ServerHost, ServerPort);
                     lock (locker)
@@ -50,12 +44,13 @@ namespace TMServerLinker
                         Writer = new StreamWriter(Server.GetStream());
                         Reader = new StreamReader(Server.GetStream());
                         IsConnected = true;
-                        reciveThread = new Thread(()=> StartReceivingDataAsync());
+                        reciveThread = new Thread(() => StartReceivingDataAsync());
                         reciveThread.Name = "Recive from server thread";
-                        sendThread = new Thread(()=>SendRequestFromQueueAsync());
+                        sendThread = new Thread(() => SendRequestFromQueueAsync());
                         sendThread.Name = "Send to server thread";
                         reciveThread.Start();
                         sendThread.Start();
+                        OnConnectionOpened?.Invoke();
                     }
                 }
                 catch (Exception ex)
@@ -66,9 +61,8 @@ namespace TMServerLinker
                 }
             }
         }
-        private  async Task StartReceivingDataAsync() 
+        private async Task StartReceivingDataAsync()
         {
-
             try
             {
                 while (true)
@@ -79,8 +73,8 @@ namespace TMServerLinker
                         Message? message = Message.Deserialize(json);
                         if (message != null)
                         {
-                            if (message.Type == MessageType.Response && ResponseMessageReceived != null) ResponseMessageReceived.Invoke(message);
-                            else if (message.Type == MessageType.UpdateClient && UpdateMessageReceived != null) UpdateMessageReceived.Invoke(message);
+                            if (message.Type == MessageType.Response) ResponseMessageRecived?.Invoke(message);
+                            else if (message.Type == MessageType.Update) UpdateMessageRecived?.Invoke(message);
                         }
                     }
                 }
@@ -90,8 +84,31 @@ namespace TMServerLinker
                 Console.WriteLine($"Error receiving data from server: {ex.Message}");
             }
         }
+        private async Task SendRequestFromQueueAsync()
+        {
+            try
+            {
+                while (true)
+                {
 
-        public void Dispose()
+                    if (Requests.Count - 1 >= 0)
+                    {
+                        Message request = Requests.Dequeue();
+                        string json = request.Serialize();
+                        if (!string.IsNullOrEmpty(json))
+                        {
+                            await Writer.WriteLineAsync(json);
+                            await Writer.FlushAsync();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Writting data error: {ex.Message}");
+            }
+        }
+        public override void Dispose()
         {
             try
             {
@@ -107,37 +124,7 @@ namespace TMServerLinker
                     Reader?.Dispose();
                 }
             }
-            catch{}
-            
-
-        }
-        private async Task SendRequestFromQueueAsync()
-        {
-            try
-            {
-                while (true)
-                {
-
-                    if (Requests.Count - 1 >= 0)
-                    {
-                        Message request = Requests.Dequeue();
-                        string json = request.Serialize();
-                        if (!string.IsNullOrEmpty(json))
-                        {
-                            await Writer?.WriteLineAsync(json);
-                            await Writer?.FlushAsync();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Writting data error: {ex.Message}");
-            }
-        }
-        public void AddMessageToQueue(Message message)
-        {
-            Requests.Enqueue(message);
+            catch { }
         }
     }
 }

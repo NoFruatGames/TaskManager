@@ -8,6 +8,6 @@ namespace TransferDataTypes
 {
     public enum MessageAction
     {
-        None, RegisterAccount, LoginToAccount
+        None, RegisterAccount, LoginToAccount, InitSession
     }
 }

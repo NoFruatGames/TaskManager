@@ -3,24 +3,31 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using TransferDataTypes;
+using TransferDataTypes.Payloads;
+
 namespace TMServer
 {
     public class Server :IDisposable
     {
         private ConnectionHandler connectionHandler;
-        private List<ClientHandler> clients;
+        private Clients clients;
         private Profiles profiles;
-        private RequestProcessor requestProcessor;
+        //private RequestProcessor requestProcessor;
+        private SessionManager sessionManager;
+        private readonly Random random = new Random();
         public Server(string host, int port)
         {
             connectionHandler = new ConnectionHandler(new IPEndPoint(IPAddress.Parse(host), port));
-            connectionHandler.ClientConnected += ConnectionHandler_ClientConnected; ;
-            clients = new List<ClientHandler>();
+            connectionHandler.ClientConnected += ConnectionHandler_ClientConnected;
+            sessionManager = new SessionManager(random);
+            clients = new Clients();
             profiles = new Profiles();
-            requestProcessor = new RequestProcessor() 
-            {
-                profiles= profiles 
-            };
+            //requestProcessor = new RequestProcessor() 
+            //{
+            //    Profiles= profiles,
+            //    SessionManager = sessionManager
+            //};
         }
         public void Start()
         {
@@ -37,7 +44,7 @@ namespace TMServer
                     string? command = Console.ReadLine();
                     if(command == "show clients")
                     {
-                        foreach (var c in clients)
+                        foreach (var c in clients.GetAllClients())
                         {
                             Console.WriteLine(c);
                         }
@@ -64,35 +71,110 @@ namespace TMServer
         }
         private void ConnectionHandler_ClientConnected(TcpClient obj)
         {
-            ClientHandler client = new ClientHandler(obj);
-            client.ClientDisconnected += Client_ClientDisconnected;
-            client.OnRequestRecived += Client_OnRequestRecived;
-            clients.Add(client);
-            Thread reciveThread = new Thread(()=>client.HandleClient());
-            reciveThread.Start();
+            clients.RegisterClient(obj);
+            clients.OnRequestRecived += Clients_OnRequestRecived;
+            clients.OnClientDisconnected += Clients_OnClientDisconnected;
+            
         }
 
-        private async Task Client_OnRequestRecived(TransferDataTypes.Message message, ClientHandler sender)
+        private void Clients_OnClientDisconnected(string clientId)
         {
-            TransferDataTypes.Message response = requestProcessor.Process(message);
-            await sender.SendMessageAsync(response.Serialize());
+            sessionManager.RemoveClientFromSession(clientId);
         }
 
-        private void Client_ClientDisconnected(ClientHandler obj)
+        private async Task Clients_OnRequestRecived(Message message, string senderId)
         {
-            try { obj.Dispose(); } catch { }      
-            clients.Remove(obj);
+            //TransferDataTypes.Message? response = requestProcessor.Process(message);
+            if(message.Action == TransferDataTypes.MessageAction.InitSession) {
+                string sessionKey = message.DeserializePayload<string>()??string.Empty;
+                if(!sessionManager.RegisterClientForSession(senderId, sessionKey))
+                {
+
+                }
+            }
+            else if(message.Action == TransferDataTypes.MessageAction.LoginToAccount)
+            {
+                PayloadAccountInfo payloadAccountInfo = message.DeserializePayload<PayloadAccountInfo>();
+                Profile? p = profiles.GetByUsername(payloadAccountInfo.Username);
+                Message response = new Message()
+                {
+                    Id = message.Id,
+                    Action = MessageAction.LoginToAccount,
+                    Type = MessageType.Response,
+                };
+                sessionManager.RemoveClientFromSession(senderId);
+                if (p is not null && p.Password == payloadAccountInfo.Password)
+                {
+                    string sessionKey = sessionManager.GetSessionKeyByProfile(p.Username);
+                    sessionManager.RegisterClientForSession(senderId, sessionKey);
+                    response.Payload = new PayloadLoginToAccountResult()
+                    {
+                        SessionKey = sessionKey,
+                        Result = LoginToAccountResult.Success
+                    };
+                }else if(p is not null && p.Password == payloadAccountInfo.Password)
+                {
+                    response.Payload = new PayloadLoginToAccountResult()
+                    {
+                        SessionKey = string.Empty,
+                        Result = LoginToAccountResult.WrongPassword
+                    };
+                }
+                else
+                {
+                    response.Payload = new PayloadLoginToAccountResult()
+                    {
+                        SessionKey = string.Empty,
+                        Result = LoginToAccountResult.WrongUsername
+                    };
+                }
+                ClientHandler? client = clients.GetClientById(senderId);
+                if (client is not null)
+                    await client.SendMessageAsync(response.Serialize());
+            }
+            else if (message.Action == TransferDataTypes.MessageAction.RegisterAccount)
+            {
+                PayloadAccountInfo payloadAccountInfo = message.DeserializePayload<PayloadAccountInfo>();
+                CreateAccountResult result = profiles.Add(payloadAccountInfo);
+                Message response = new Message()
+                {
+                    Id = message.Id,
+                    Action = MessageAction.LoginToAccount,
+                    Type = MessageType.Response,
+                };
+                sessionManager.RemoveClientFromSession(senderId);
+                if (result == CreateAccountResult.Success)
+                {
+                    string sessionKey = sessionManager.CreateSession(payloadAccountInfo.Username);
+                    sessionManager.RegisterClientForSession(senderId, sessionKey);
+                    response.Payload = new PayloadCreateAccountResult()
+                    {
+                        SessionKey = sessionKey,
+                        Result = CreateAccountResult.Success
+                    };
+                }
+                else
+                {
+                    response.Payload = new PayloadCreateAccountResult()
+                    {
+                        SessionKey = string.Empty,
+                        Result = result
+                    };
+                }
+                ClientHandler? client = clients.GetClientById(senderId);
+                if (client is not null)
+                    await client.SendMessageAsync(response.Serialize());
+
+            }
         }
+
 
         public void Dispose()
         {
             try
             {
                 connectionHandler.Dispose();
-                foreach (var c in clients)
-                {
-                    c.Dispose();
-                }
+                clients.Dispose();
             }
             catch { }
 

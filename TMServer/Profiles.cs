@@ -7,23 +7,23 @@ namespace TMServer
     internal class Profiles
     {
         List<Profile> profiles = new List<Profile>();
-        public PayloadCreateAccountResult Add(Profile profile)
+        public CreateAccountResult Add(Profile profile)
         {
-            PayloadCreateAccountResult check = CheckAccountCanBeCreated(profile);
-            if (check != PayloadCreateAccountResult.Success) return check;
+            CreateAccountResult check = CheckAccountCanBeCreated(profile);
+            if (check != CreateAccountResult.Success) return check;
             profiles.Add(profile);
-            return PayloadCreateAccountResult.Success;
+            return CreateAccountResult.Success;
         }
-        public PayloadCreateAccountResult Add(PayloadAccountInfo accountInfo)
+        public CreateAccountResult Add(PayloadAccountInfo accountInfo)
         {
             Profile profile = new Profile();
             profile.Username = accountInfo.Username;
             profile.Password = accountInfo.Password;
             profile.Email = accountInfo.Email;
-            PayloadCreateAccountResult check = CheckAccountCanBeCreated(profile);
-            if (check != PayloadCreateAccountResult.Success) return check;
+            CreateAccountResult check = CheckAccountCanBeCreated(profile);
+            if (check != CreateAccountResult.Success) return check;
             profiles.Add(profile);
-            return PayloadCreateAccountResult.Success;
+            return CreateAccountResult.Success;
         }
         public int Count { get { return profiles.Count; } }
         public Profile? GetByUsername(string username)
@@ -42,14 +42,14 @@ namespace TMServer
             else
                 return null;
         }
-        private PayloadCreateAccountResult CheckAccountCanBeCreated(Profile profile)
+        private CreateAccountResult CheckAccountCanBeCreated(Profile profile)
         {
             foreach(var p in profiles)
             {
                 if (p.Username == profile.Username)
-                    return PayloadCreateAccountResult.UsernameAlreadyExist;
+                    return CreateAccountResult.UsernameAlreadyExist;
             }
-            return PayloadCreateAccountResult.Success;
+            return CreateAccountResult.Success;
         }
     }
 }

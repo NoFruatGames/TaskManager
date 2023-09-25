@@ -14,7 +14,7 @@ namespace TMServer
         private NetworkStream stream;
         private StreamWriter writer;
         private StreamReader reader;
-        private string id;
+        public string Id { get; init; }=string.Empty;
         private string clientIP=string.Empty;
         private int clientPort=-1;
         private readonly object locker = new object();
@@ -28,7 +28,7 @@ namespace TMServer
             stream = client.GetStream();
             this.writer = new StreamWriter(client.GetStream());
             this.reader = new StreamReader(client.GetStream());
-            id = Guid.NewGuid().ToString();
+            Id = Guid.NewGuid().ToString();
             if(client.Client.RemoteEndPoint is IPEndPoint endPoint)
             {
                 clientIP = endPoint.Address.ToString();
@@ -56,7 +56,7 @@ namespace TMServer
         }
         public async Task HandleClient()
         {
-            Thread.CurrentThread.Name = id + " client handler";
+            Thread.CurrentThread.Name = Id + " client handler";
             try
             {
                 while (true)
@@ -66,9 +66,9 @@ namespace TMServer
                     Message? message = Message.Deserialize(json ?? string.Empty);
                     if (message != null)
                     {
-                        if (message.Type == MessageType.Request)
+                        if (message.Type == MessageType.Request && OnRequestRecived is not null)
                         {
-                            await OnRequestRecived?.Invoke(message, this);
+                            await OnRequestRecived.Invoke(message, this);
                         }
                     }
                 }
@@ -77,11 +77,11 @@ namespace TMServer
             {
                 Console.WriteLine(ex.Message);
                 ClientDisconnected?.Invoke(this);
-                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {id} has disconnected");
+                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {Id} has disconnected");
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {id} error: {ex.Message}");
+                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Client {Id} error: {ex.Message}");
             }
         }
         public async Task SendMessageAsync(string  message)
@@ -97,13 +97,13 @@ namespace TMServer
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: sending data to client {id} error: {ex.Message}");
+                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: sending data to client {Id} error: {ex.Message}");
             }
 
         }
         public override string ToString()
         {
-            return $"{clientIP}:{clientPort}\t{id}";
+            return $"{clientIP}:{clientPort}\t{Id}";
         }
     }
     
