@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TMServer
+namespace TMServer.RequestProcessing
 {
     internal class SessionManager
     {
@@ -14,24 +14,22 @@ namespace TMServer
         {
             this.random = random;
         }
-        public string CreateSession(string profileName)
+        public string CreateSession()
         {
-            if(!string.IsNullOrEmpty(GetSessionKeyByProfile(profileName)))return string.Empty;
-            Session s = new Session(random, profileName);
+            Session s = new Session(random);
             sessions.Add(s);
             return s.Key;
         }
-        public bool CreateSession(string key, string profileName)
+        public bool CreateSession(string key)
         {
-            if (!string.IsNullOrEmpty(GetSessionKeyByProfile(profileName))) return false;
             if (sessionExist(key) || string.IsNullOrEmpty(key)) return false;
-            Session s = new Session(key, profileName);
+            Session s = new Session(key);
             sessions.Add(s);
             return true;
         }
         public bool DeleteSessionByKey(string key)
         {
-            for(int i =0; i < sessions.Count; i++) 
+            for (int i = 0; i < sessions.Count; i++)
             {
                 if (sessions[i].Key == key)
                 {
@@ -43,9 +41,9 @@ namespace TMServer
         }
         public bool RegisterClientForSession(string clientId, string sessionKey)
         {
-            for(int i = 0; i < sessions.Count; i++)
+            for (int i = 0; i < sessions.Count; i++)
             {
-                if(sessions[i].Key == sessionKey)
+                if (sessions[i].Key == sessionKey)
                 {
                     sessions[i].ClientIds.Add(clientId);
                     return true;
@@ -56,7 +54,7 @@ namespace TMServer
         }
         public List<string>? GetClientIdsBySession(string sessionKey)
         {
-            for(int i =0; i < sessionKey.Length; i++)
+            for (int i = 0; i < sessionKey.Length; i++)
             {
                 if (sessions[i].Key == sessionKey)
                 {
@@ -67,7 +65,8 @@ namespace TMServer
         }
         public bool RemoveClientFromSession(string clientId)
         {
-            for(int i = 0; i < sessions.Count; i++) {
+            for (int i = 0; i < sessions.Count; i++)
+            {
                 if (sessions[i].ClientIds.Remove(clientId))
                     return true;
             }
@@ -75,7 +74,7 @@ namespace TMServer
         }
         private bool sessionExist(string sessionKey)
         {
-            for(int i = 0; i < sessions.Count; i++)
+            for (int i = 0; i < sessions.Count; i++)
             {
                 if (sessions[i].Key == sessionKey)
                     return true;
@@ -83,14 +82,5 @@ namespace TMServer
             return false;
         }
 
-        public string GetSessionKeyByProfile(string accountName)
-        {
-            foreach(var s in sessions)
-            {
-                if(s.AccountName == accountName)
-                    return s.Key;
-            }
-            return string.Empty;
-        }
     }
 }

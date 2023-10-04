@@ -1,15 +1,15 @@
-﻿using System;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Net;
-namespace TMServer
+using TMServer.ConnectionTools.ConnectionProcessors;
+namespace TMServer.ConnectionTools.ConnectionHandlers
 {
-    internal class ConnectionHandler :IDisposable
+    internal class TCPConnectionHandler : IConnectionHandler
     {
-        public event Action<TcpClient>? ClientConnected;
-        public IPEndPoint EndPoint { get; set; }
+        public event Action<IConnectionProcessor>? ClientConnected;
+        public IPEndPoint EndPoint { get; init; }
         private TcpListener Listener { get; set; }
         private readonly object locker = new object();
-        public ConnectionHandler(IPEndPoint endPoint)
+        public TCPConnectionHandler(IPEndPoint endPoint)
         {
             EndPoint = endPoint;
 
@@ -28,14 +28,15 @@ namespace TMServer
         }
         public void ListenClients()
         {
-            lock(locker)
+            lock (locker)
             {
                 try
                 {
                     while (true)
                     {
                         TcpClient client = Listener.AcceptTcpClient();
-                        ClientConnected?.Invoke(client);
+                        TCPConnectionProcessor connection = new TCPConnectionProcessor(client);
+                        ClientConnected?.Invoke(connection);
                     }
                 }
                 catch (Exception ex)
@@ -47,15 +48,23 @@ namespace TMServer
                     Listener.Stop();
                 }
             }
-            
+
         }
         public void Dispose()
         {
-            lock(locker)
+            lock (locker)
             {
                 Listener.Stop();
             }
 
+        }
+        public string GetHost()
+        {
+            return EndPoint.Address.ToString();
+        }
+        public int GetPort()
+        {
+            return EndPoint.Port;
         }
     }
 }

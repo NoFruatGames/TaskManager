@@ -17,7 +17,7 @@ namespace TMServerLinker.ConnectionHandlers
 
         internal override event Action<Message>? UpdateMessageRecived;
         internal override event Action<Message>? ResponseMessageRecived;
-        internal override event Action<Message>? InitSessionMessageRecived;
+        internal override event Action<bool>? InitSessionMessageRecived;
         internal override event Action? OnConnectionOpened;
         internal override event Action? OnConnectionClosed;
 
@@ -73,8 +73,10 @@ namespace TMServerLinker.ConnectionHandlers
                         Message? message = Message.Deserialize(json);
                         if (message != null)
                         {
-                            if (message.Type == MessageType.Response) ResponseMessageRecived?.Invoke(message);
+                            if (message.Type == MessageType.None || message.Action == MessageAction.None) continue;
+                            if (message.Type == MessageType.Response && message.Action != MessageAction.InitSession) ResponseMessageRecived?.Invoke(message);
                             else if (message.Type == MessageType.Update) UpdateMessageRecived?.Invoke(message);
+                            else if (message.Type == MessageType.Response && message.Action == MessageAction.InitSession) InitSessionMessageRecived?.Invoke(message.DeserializePayload<bool>());
                         }
                     }
                 }
@@ -86,28 +88,11 @@ namespace TMServerLinker.ConnectionHandlers
         }
         private async Task SendRequestFromQueueAsync()
         {
-            try
-            {
-                while (true)
-                {
 
-                    if (Requests.Count - 1 >= 0)
-                    {
-                        Message request = Requests.Dequeue();
-                        string json = request.Serialize();
-                        if (!string.IsNullOrEmpty(json))
-                        {
-                            await Writer.WriteLineAsync(json);
-                            await Writer.FlushAsync();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"{DateTime.Now.ToShortTimeString()}: Writting data error: {ex.Message}");
-            }
         }
+
+
+
         public override void Dispose()
         {
             try

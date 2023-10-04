@@ -35,10 +35,10 @@ namespace TMServer
             }
             return null;
         }
-        public Profile? GetById(int id)
+        public Profile? GetByIndex(int index)
         {
-            if(id >= 0 && id < profiles.Count)
-                return profiles[id];
+            if(index >= 0 && index < profiles.Count)
+                return profiles[index];
             else
                 return null;
         }
@@ -50,6 +50,15 @@ namespace TMServer
                     return CreateAccountResult.UsernameAlreadyExist;
             }
             return CreateAccountResult.Success;
+        }
+        public Profile? GetProfileByProfileId(int profileId)
+        {
+            foreach(var p in profiles)
+            {
+                if (p.Id == profileId)
+                    return p;
+            }
+            return null;
         }
     }
 }

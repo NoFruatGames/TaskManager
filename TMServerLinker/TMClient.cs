@@ -15,19 +15,32 @@ namespace TMServerLinker
         private static int id;
         private string? DataFolder { get; init; }
         private string? sessionKey = null; 
-        public TMClient(ConnectionHandler connection)
+        public bool Autorized { get; private set; } = false;
+        private TMClient(ConnectionHandler connection)
         {
             this.connection = connection;
-            connection.UpdateMessageReceived += Connection_UpdateMessageReceived;
-            connection.ResponseMessageReceived += Connection_ResponseMessageReceived;
+            connection.UpdateMessageRecived += Connection_UpdateMessageReceived;
+            connection.ResponseMessageRecived += Connection_ResponseMessageReceived;
             connection.OnConnectionOpened += Connection_OnConnectionOpened;
+            connection.InitSessionMessageRecived += Connection_InitSessionMessageRecived;
             connectionThread = new Thread(()=>connection.ConnectToServerAsync());
             connectionThread.Name = "connection thread";
             connectionThread.Start();
         }
-        public TMClient(ConnectionHandler connection, string dataFolder) :this(connection)
+        public TMClient(ConnectionHandler connection, string dataFolder) : this(connection)
         {
             DataFolder = dataFolder;
+        }
+
+
+        private void Connection_InitSessionMessageRecived(bool success)
+        {
+            if (!success)
+            {
+                sessionKey = null;
+                SaveSessionKeyToFile();
+            } 
+
         }
         private void GetSessionKeyFromFile()
         {

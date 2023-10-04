@@ -2,9 +2,10 @@
 using System;
 using TMServerLinker;
 using TMServerLinker.ConnectionHandlers;
-TMClient server = new(new TCPConnectionHandler("192.168.0.129",4980),
+TMClient server = new(
+    new TCPConnectionHandler("192.168.0.129",4980),
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NoFruatINC", "TaskManager", "Client")
-    );
+);
 try
 {
     while (true)
