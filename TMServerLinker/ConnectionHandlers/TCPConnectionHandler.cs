@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net.Sockets;
 using TransferDataTypes;
 
 namespace TMServerLinker.ConnectionHandlers
@@ -15,13 +10,11 @@ namespace TMServerLinker.ConnectionHandlers
         private StreamWriter Writer { get; set; } = null!;
         private StreamReader Reader { get; set; } = null!;
 
-        internal override event Action<Message>? UpdateMessageRecived;
-        internal override event Action<Message>? ResponseMessageRecived;
-        internal override event Action<bool>? InitSessionMessageRecived;
+        internal override event Action<TMMessage>? MessageRecived;
         internal override event Action? OnConnectionOpened;
         internal override event Action? OnConnectionClosed;
 
-        public TCPConnectionHandler(string serverHost = "192.168.0.129", int serverPort = 4980):base(serverHost, serverPort)
+        public TCPConnectionHandler(string serverHost = "192.168.0.129", int serverPort = 4980) : base(serverHost, serverPort)
         {
 
         }
@@ -68,17 +61,8 @@ namespace TMServerLinker.ConnectionHandlers
                 while (true)
                 {
                     string? json = await Reader.ReadLineAsync();
-                    if (json != null)
-                    {
-                        Message? message = Message.Deserialize(json);
-                        if (message != null)
-                        {
-                            if (message.Type == MessageType.None || message.Action == MessageAction.None) continue;
-                            if (message.Type == MessageType.Response && message.Action != MessageAction.InitSession) ResponseMessageRecived?.Invoke(message);
-                            else if (message.Type == MessageType.Update) UpdateMessageRecived?.Invoke(message);
-                            else if (message.Type == MessageType.Response && message.Action == MessageAction.InitSession) InitSessionMessageRecived?.Invoke(message.DeserializePayload<bool>());
-                        }
-                    }
+                    TMMessage? message = TMMessage.Deserialize(json ?? string.Empty);
+                    if (message is not null) MessageRecived?.Invoke(message);
                 }
             }
             catch (Exception ex)
@@ -88,6 +72,21 @@ namespace TMServerLinker.ConnectionHandlers
         }
         private async Task SendRequestFromQueueAsync()
         {
+            try
+            {
+                while (IsConnected)
+                {
+                    if(Requests.Count - 1 >= 0)
+                    {
+                        TMMessage request = Requests.Dequeue();
+                        await Writer.WriteLineAsync(request.Serialize());
+                        await Writer.FlushAsync();
+                    }
+                }
+            }catch(Exception ex)
+            {
+                Console.WriteLine($"sending to server error: {ex.Message}");
+            }
 
         }
 

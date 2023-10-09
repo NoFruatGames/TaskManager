@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TransferDataTypes
+namespace TransferDataTypes.Results
 {
-    public enum MessageType
+    public enum LogoutResult
     {
-        None, Request, Response, Update
+       None, Success, TokenNotExist
     }
 }

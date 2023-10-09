@@ -1,10 +1,9 @@
-﻿// See https://aka.ms/new-console-template for more information
-using TMServer;
-
-Server gameServer = new Server("192.168.0.129", 4980);
+﻿using TMServer;
+Server server = new Server();
+server.RegisterListener(ConnectionType.TCP, "192.168.0.129", 4980);
 try
 {
-    gameServer.Start();
+    server.Start();
 }
 catch (Exception ex)
 {
@@ -12,5 +11,5 @@ catch (Exception ex)
 }
 finally
 {
-    gameServer.Dispose();
+    server.Dispose();
 }

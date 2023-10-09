@@ -12,6 +12,7 @@ try
     {
         Console.WriteLine("1) Register account");
         Console.WriteLine("2) Login to account");
+        Console.WriteLine("3) Logout");
         int num = int.Parse(Console.ReadLine());
         if (num == 1)
         {
@@ -30,6 +31,10 @@ try
             Console.Write("Password: ");
             string? password = Console.ReadLine();
             _ = Task.Run(() => server.LoginToAccount(new Profile() { Username = login, Password = password,}));
+        }
+        else if(num == 3)
+        {
+            _ = Task.Run(server.Logout);
         }
     }
 }

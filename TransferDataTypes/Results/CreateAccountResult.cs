@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TransferDataTypes
+namespace TransferDataTypes.Results
 {
-    public enum MessageAction
+    public enum CreateAccountResult
     {
-        None, RegisterAccount, LoginToAccount, InitSession
+        None, Success
     }
 }

@@ -1,47 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using TMServerLinker.ConnectionHandlers;
 using TransferDataTypes;
-using TransferDataTypes.Payloads;
-using TMServerLinker.ConnectionHandlers;
+using TransferDataTypes.Messages;
+
 namespace TMServerLinker
 {
-    public class TMClient :IDisposable
+    public class TMClient : IDisposable
     {
         private ConnectionHandler connection;
-        Thread connectionThread;
-        private static int id;
+        private Thread connectionThread;
+        private static int requestId;
         private string? DataFolder { get; init; }
-        private string? sessionKey = null; 
+        private string? sessionKey = null;
         public bool Autorized { get; private set; } = false;
         private TMClient(ConnectionHandler connection)
         {
             this.connection = connection;
-            connection.UpdateMessageRecived += Connection_UpdateMessageReceived;
-            connection.ResponseMessageRecived += Connection_ResponseMessageReceived;
+            connection.MessageRecived += Connection_MessageRecived;
             connection.OnConnectionOpened += Connection_OnConnectionOpened;
-            connection.InitSessionMessageRecived += Connection_InitSessionMessageRecived;
-            connectionThread = new Thread(()=>connection.ConnectToServerAsync());
+            connectionThread = new Thread(() => connection.ConnectToServerAsync());
             connectionThread.Name = "connection thread";
             connectionThread.Start();
         }
+        private void Connection_MessageRecived(TMMessage obj)
+        {
+            Console.WriteLine(obj.ToString());
+            responses.Add(obj);
+        }
+
         public TMClient(ConnectionHandler connection, string dataFolder) : this(connection)
         {
             DataFolder = dataFolder;
         }
 
-
-        private void Connection_InitSessionMessageRecived(bool success)
-        {
-            if (!success)
-            {
-                sessionKey = null;
-                SaveSessionKeyToFile();
-            } 
-
-        }
         private void GetSessionKeyFromFile()
         {
             if (DataFolder == null) return;
@@ -51,13 +41,14 @@ namespace TMServerLinker
                 string file = Path.Combine(DataFolder, "session.key");
                 using (var stream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.Read))
                 {
-                    using(var reader = new StreamReader(stream))
+                    using (var reader = new StreamReader(stream))
                     {
                         sessionKey = reader.ReadToEnd();
+                        sessionKey = sessionKey.Trim();
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine($"Read session key error: {ex}");
             }
@@ -76,7 +67,8 @@ namespace TMServerLinker
                         writer.WriteLine(sessionKey ?? string.Empty);
                     }
                 }
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine($"Write session key error: {ex}");
             }
@@ -85,127 +77,67 @@ namespace TMServerLinker
         private void Connection_OnConnectionOpened()
         {
             GetSessionKeyFromFile();
-            Message message = new Message()
-            { 
-                Action = MessageAction.InitSession, 
-                Type=MessageType.Request,
-                Payload=sessionKey,
-                Id = id
-            };
-            id += 1;
-            connection.AddMessageToQueue(message);
         }
 
-        List<Message> responses = new List<Message>();
+        private List<TMMessage> responses = new List<TMMessage>();
         //Блокирующий метод
-        private Message? GetResponseById(int id, int waitingSeconds= 15)
-        {
-            int failCount = 0;
-            while (true)
-            {
-                if (failCount >= waitingSeconds * 2 && waitingSeconds > 0)
-                    return null;
-                for(int i = 0; i < responses.Count; ++i)
-                {
-                    if (responses[i].Id == id)
-                    {
-                        return responses[i];
-                    }
-                }
-                if(waitingSeconds > 0)
-                {
-                    failCount += 1;
-                    Thread.Sleep(500);
-                }
+        //private TMMessage? GetResponseById(int id, int waitingSeconds = 15)
+        //{
+        //    int failCount = 0;
+        //    while (true)
+        //    {
+        //        if (failCount >= waitingSeconds * 2 && waitingSeconds > 0)
+        //            return null;
+        //        for (int i = 0; i < responses.Count; ++i)
+        //        {
+        //            if (responses[i].Id == id)
+        //            {
+        //                return responses[i];
+        //            }
+        //        }
+        //        if (waitingSeconds > 0)
+        //        {
+        //            failCount += 1;
+        //            Thread.Sleep(500);
+        //        }
 
-            }
-        }
-        private void Connection_ResponseMessageReceived(Message obj)
-        {
-            responses.Add(obj);
-        }
-
-        private void Connection_UpdateMessageReceived(Message obj)
-        {
-            throw new NotImplementedException();
-        }
-
+        //    }
+        //}
         public void Dispose()
         {
             try
             {
                 connection.Dispose();
             }
-            catch{}
+            catch { }
 
         }
         public void RegisterAccount(Profile profile)
         {
-            ++id;
-            DateTime sendTime = DateTime.Now;
-            Message message = new Message()
+            CreateAccountMessage request = new CreateAccountMessage() 
             {
-                Type = MessageType.Request,
-                Action = MessageAction.RegisterAccount,
-                Id = id,
-                Payload = new PayloadAccountInfo()
-                {
-                    Username = profile.Username,
-                    Password = profile.Password,
-                    Email = profile.Email,
-                }
+                Username = profile.Username,
+                Password = profile.Password,
+                Email = profile.Email,
+                IsRequest=true,
+                SessionToken = sessionKey ?? string.Empty
             };
-            connection.AddMessageToQueue(message);
-            Message? response = GetResponseById(message.Id, -1);
-            if(response is not null)
-            {
-                PayloadCreateAccountResult? result = response.DeserializePayload<PayloadCreateAccountResult>();
-                if(result is not null)
-                {
-                    sessionKey = result.Value.SessionKey;
-                    SaveSessionKeyToFile();
-                    Console.WriteLine($"{sessionKey}\t{result.Value.Result.ToString()}");
-                }
-
-            }
-            else
-            {
-                Console.WriteLine("timeout exceeded");
-            }
+            connection.AddMessageToQueue(request);
 
         }
         public void LoginToAccount(Profile profile)
         {
-            ++id;
-            Message message = new Message()
-            {
-                Type = MessageType.Request,
-                Action = MessageAction.LoginToAccount,
-                Id = id,
-                Payload = new PayloadAccountInfo()
-                {
-                    Username = profile.Username,
-                    Password = profile.Password,
-                    Email = profile.Email,
-                }
+
+        }
+        public void Logout()
+        {
+            LogoutMessage message = new LogoutMessage()
+            { 
+                SessionToken = sessionKey ?? string.Empty,
+                IsRequest = true,
             };
             connection.AddMessageToQueue(message);
-            Message? response = GetResponseById(message.Id, -1);
-            if (response is not null)
-            {
-                PayloadLoginToAccountResult? loginResult = response?.DeserializePayload<PayloadLoginToAccountResult>();
-                if(loginResult is not null)
-                {
-                    sessionKey = loginResult.Value.SessionKey;
-                    SaveSessionKeyToFile();
-                    Console.WriteLine($"{sessionKey}\t{loginResult.Value.Result.ToString()}");
-                }
-                
-            }
-            else
-            {
-                Console.WriteLine("timeout exceeded");
-            }
         }
     }
 }
+ 
