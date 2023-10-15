@@ -34,7 +34,7 @@ try
         }
         else if(num == 3)
         {
-            _ = Task.Run(server.Logout);
+            _ = Task.Run(async ()=> await server.Logout());
         }
     }
 }

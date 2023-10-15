@@ -3,7 +3,7 @@ using TransferDataTypes.Results;
 
 namespace TransferDataTypes.Messages
 {
-    public class LogoutMessage : TMMessage
+    public class CheckSessionMessage :TMMessage
     {
         [Newtonsoft.Json.JsonIgnore]
         [RequestProperty]
@@ -21,25 +21,25 @@ namespace TransferDataTypes.Messages
             }
             set
             {
-                if (value) setParameter("request", "logout");
-                else setParameter("response", "logout");
+                if (value) setParameter("request", "check_session_token");
+                else setParameter("response", "check_session_token");
 
             }
         }
         [Newtonsoft.Json.JsonIgnore]
         [ResponseProperty]
-        public LogoutResult LogoutResult
+        public CheckSessionResult CheckTokenResult
         {
             get
             {
-                if (!IsRequest) return getParameterValue<LogoutResult>("logout_result");
-                else return LogoutResult.None;
+                if (!IsRequest) return getParameterValue<CheckSessionResult>("check_result");
+                else return CheckSessionResult.None;
 
             }
             set
             {
-                if (!IsRequest) setParameter("logout_result", value);
-                else setParameter("logout_result", LogoutResult.None);
+                if (!IsRequest) setParameter("check_result", value);
+                else setParameter("check_result", CheckSessionResult.None);
             }
         }
         public static new LogoutMessage? Deserialize(string text)
@@ -51,37 +51,37 @@ namespace TransferDataTypes.Messages
         {
             public CheckResult() { }
             public string SessionToken { get; init; } = string.Empty;
-            public LogoutResult LogoutResult { get; init; } = LogoutResult.None;
+            public CheckSessionResult CheckTokenResult { get; init; } = CheckSessionResult.None;
             public bool IsRequest { get; init; }
             public bool CheckSucess { get; init; } = false;
         }
         private static CheckResult checkIdentity(TMMessage message)
         {
             CheckPropertyResult<string> sessionToken = getPropertyValue<string, LogoutMessage>("SessionToken", "session_token", message);
-            CheckPropertyResult<LogoutResult> logoutResult = getPropertyValue<LogoutResult, LogoutMessage>("LogoutResult", "logout_result", message);
+            CheckPropertyResult<CheckSessionResult> checkResult = getPropertyValue<CheckSessionResult, CheckSessionMessage>("CheckTokenResult", "check_result", message);
             bool? isrequest = null;
             string? c = message.getParameterValue<string>("request");
-            if (c is not null && c == "logout") isrequest = true;
+            if (c is not null && c == "check_session_token") isrequest = true;
             c = message.getParameterValue<string>("response");
-            if (c is not null && c == "logout") isrequest = false;
+            if (c is not null && c == "check_session_token") isrequest = false;
             return new CheckResult()
             {
-                SessionToken = sessionToken.Property??string.Empty,
+                SessionToken = sessionToken.Property ?? string.Empty,
                 IsRequest = isrequest ?? false,
-                LogoutResult = logoutResult.Property,
-                CheckSucess = sessionToken.Success && logoutResult.Success && isrequest is not null
+                CheckTokenResult = checkResult.Property,
+                CheckSucess = sessionToken.Success && checkResult.Success && isrequest is not null
             };
         }
-        public static LogoutMessage? TryParse(TMMessage message)
+        public static CheckSessionMessage? TryParse(TMMessage message)
         {
             CheckResult check = checkIdentity(message);
             if (check.CheckSucess)
             {
-                LogoutMessage m = new LogoutMessage()
+                CheckSessionMessage m = new CheckSessionMessage()
                 {
                     IsRequest = check.IsRequest,
                     SessionToken = check.SessionToken,
-                    LogoutResult = check.LogoutResult
+                    CheckTokenResult = check.CheckTokenResult
                 };
                 return m;
             }

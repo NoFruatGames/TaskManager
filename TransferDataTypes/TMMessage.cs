@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Text.Json.Serialization;
+using TransferDataTypes.Attributes;
 using TransferDataTypes.Messages;
 
 namespace TransferDataTypes
@@ -10,6 +11,8 @@ namespace TransferDataTypes
         internal List<KeyValueStruct> parameters = new List<KeyValueStruct>();
         [Newtonsoft.Json.JsonIgnore]
         public int ParametersCount { get { return parameters.Count; } }
+        [Newtonsoft.Json.JsonIgnore]
+        public required abstract bool IsRequest { get; set; }
         public TMMessage() { }
         internal struct KeyValueStruct
         {
@@ -83,6 +86,51 @@ namespace TransferDataTypes
                 text += $"{item.Key}:{item.Value.ToString()}\n";
             }
             return text;
+        }
+
+        internal static CheckPropertyResult<V> getPropertyValue<V,T>(string propertyName, string paramName, TMMessage message) where V : notnull
+        {
+            Type typeCheck = typeof(T);
+            V? messageV = message.getParameterValue<V>(paramName);
+            var properties = typeCheck.GetProperties();
+            foreach (var property in properties)
+            {
+                if (property.Name == propertyName)
+                {
+                    if (property.IsDefined(typeof(RequestPropertyAttribute), false))
+                    {
+
+                        if (message.IsRequest && ((messageV is string str && string.IsNullOrEmpty(str)) || (messageV is Enum enm && enm.ToString() == "None"))) return new CheckPropertyResult<V>(default, false);
+                        else return new CheckPropertyResult<V>(messageV, true);
+
+                    }
+                    else if(property.IsDefined(typeof(ResponsePropertyAttribute), false))
+                    {
+                        if (!message.IsRequest && ((messageV is string str && string.IsNullOrEmpty(str)) || (messageV is Enum enm && enm.ToString() == "None"))) return new CheckPropertyResult<V>(default, false);
+                        else return new CheckPropertyResult<V>(messageV, true);
+                    }
+                    else if (property.IsDefined(typeof(RequestResponsePropertyAttribute), false))
+                    {
+                        if ((messageV is string str && string.IsNullOrEmpty(str)) || (messageV is Enum enm && enm.ToString() == "None")) return new CheckPropertyResult<V>(default, false);
+                        else return new CheckPropertyResult<V>(messageV, true);
+                    }
+                    else
+                    {
+                        return new CheckPropertyResult<V>(messageV, true);
+                    }
+                }
+
+            }
+            return new CheckPropertyResult<V>(messageV, true); 
+        }
+    }
+    internal class CheckPropertyResult<T> where T : notnull
+    {
+        public T? Property { get;} = default;
+        public bool Success { get;} = false;
+        public CheckPropertyResult(T? property, bool success)
+        {
+            Property = property; Success = success;
         }
     }
     

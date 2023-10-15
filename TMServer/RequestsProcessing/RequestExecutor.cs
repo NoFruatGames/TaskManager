@@ -14,6 +14,8 @@ namespace TMServer.RequestsProcessing
                 processor = new CreateAccountRequestProcessor();
             else if(LogoutMessage.IsIdentity(request))
                 processor = new LogoutRequestProcessor();
+            else if (CheckSessionMessage.IsIdentity(request))
+                processor = new CheckSessionRequestProcessor();
         }
         public TMMessage Execute()
         {

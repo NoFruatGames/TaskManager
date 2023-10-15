@@ -1,30 +1,43 @@
 ﻿using TMServerLinker.ConnectionHandlers;
 using TransferDataTypes;
 using TransferDataTypes.Messages;
-
+using TransferDataTypes.Results;
 namespace TMServerLinker
 {
     public class TMClient : IDisposable
     {
         private ConnectionHandler connection;
-        private Thread connectionThread;
+
         private static int requestId;
         private string? DataFolder { get; init; }
         private string? sessionKey = null;
         public bool Autorized { get; private set; } = false;
+
+
+        private bool LogoutExecuting = false;
+
+
+
         private TMClient(ConnectionHandler connection)
         {
             this.connection = connection;
-            connection.MessageRecived += Connection_MessageRecived;
+            connection.MessageRecived += HandleReceivedMessage;
             connection.OnConnectionOpened += Connection_OnConnectionOpened;
-            connectionThread = new Thread(() => connection.ConnectToServerAsync());
+            Thread connectionThread = new Thread(() => connection.ConnectToServerAsync());
             connectionThread.Name = "connection thread";
             connectionThread.Start();
         }
-        private void Connection_MessageRecived(TMMessage obj)
+        private void HandleReceivedMessage(TMMessage obj)
         {
-            Console.WriteLine(obj.ToString());
-            responses.Add(obj);
+            Console.WriteLine(obj);
+            if (CheckSessionMessage.IsIdentity(obj))
+            {
+                CheckSessionMessage? message = CheckSessionMessage.TryParse(obj);
+                if (message is not null && message.CheckTokenResult == CheckSessionResult.Success)
+                    Autorized = true;
+                else
+                    Autorized = false;
+            }
         }
 
         public TMClient(ConnectionHandler connection, string dataFolder) : this(connection)
@@ -77,32 +90,15 @@ namespace TMServerLinker
         private void Connection_OnConnectionOpened()
         {
             GetSessionKeyFromFile();
+            CheckSessionMessage check = new CheckSessionMessage()
+            {
+                IsRequest = true,
+                SessionToken = string.IsNullOrEmpty(sessionKey) ? "none" : sessionKey
+            };
+            connection.AddMessageToQueue(check);
         }
 
-        private List<TMMessage> responses = new List<TMMessage>();
-        //Блокирующий метод
-        //private TMMessage? GetResponseById(int id, int waitingSeconds = 15)
-        //{
-        //    int failCount = 0;
-        //    while (true)
-        //    {
-        //        if (failCount >= waitingSeconds * 2 && waitingSeconds > 0)
-        //            return null;
-        //        for (int i = 0; i < responses.Count; ++i)
-        //        {
-        //            if (responses[i].Id == id)
-        //            {
-        //                return responses[i];
-        //            }
-        //        }
-        //        if (waitingSeconds > 0)
-        //        {
-        //            failCount += 1;
-        //            Thread.Sleep(500);
-        //        }
-
-        //    }
-        //}
+        private Queue<TMMessage> responses = new Queue<TMMessage>();
         public void Dispose()
         {
             try
@@ -120,7 +116,7 @@ namespace TMServerLinker
                 Password = profile.Password,
                 Email = profile.Email,
                 IsRequest=true,
-                SessionToken = sessionKey ?? string.Empty
+                SessionToken = string.IsNullOrEmpty(sessionKey) ? "none" : sessionKey
             };
             connection.AddMessageToQueue(request);
 
@@ -129,14 +125,40 @@ namespace TMServerLinker
         {
 
         }
-        public void Logout()
+        public async Task<bool> Logout()
         {
+            if(LogoutExecuting || !Autorized) return false;
             LogoutMessage message = new LogoutMessage()
             { 
-                SessionToken = sessionKey ?? string.Empty,
+                SessionToken =  string.IsNullOrEmpty(sessionKey)?"none":sessionKey,
                 IsRequest = true,
             };
             connection.AddMessageToQueue(message);
+            LogoutExecuting = true;
+            var tcs = new TaskCompletionSource<bool>();
+            Action<TMMessage> messageReceivedHandler = null;
+            messageReceivedHandler = (response) =>
+            {
+                if (LogoutMessage.IsIdentity(response))
+                {
+                    LogoutMessage? logoutMessage = LogoutMessage.TryParse(response);
+                    if (logoutMessage is not null && logoutMessage.LogoutResult == LogoutResult.Success)
+                    {
+                        Autorized = false;
+                        tcs.SetResult(true);
+                    }
+                    else
+                    {
+                        tcs.SetResult(false);
+                    }
+                    connection.MessageRecived -= messageReceivedHandler;
+                    LogoutExecuting = false;
+
+                }
+
+            };
+            connection.MessageRecived += messageReceivedHandler;
+            return await tcs.Task;
         }
     }
 }

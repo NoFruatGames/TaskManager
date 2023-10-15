@@ -1,20 +1,24 @@
-﻿using TransferDataTypes.Results;
+﻿using TransferDataTypes.Attributes;
+using TransferDataTypes.Results;
 namespace TransferDataTypes.Messages
 {
     public class CreateAccountMessage : TMMessage
     {
         [Newtonsoft.Json.JsonIgnore]
+        [RequestProperty]
         public string Username
         {
             get { return getParameterValue<string>("username") ?? string.Empty; }
             set { setParameter("username", value); }
         }
         [Newtonsoft.Json.JsonIgnore]
+        [RequestProperty]
         public string Password
         {
             get { return getParameterValue<string>("password") ?? string.Empty; }
             set { setParameter("password", value); }
         }
+        [RequestProperty]
         [Newtonsoft.Json.JsonIgnore]
         public string Email
         {
@@ -22,13 +26,14 @@ namespace TransferDataTypes.Messages
             set { setParameter("email", value); }
         }
         [Newtonsoft.Json.JsonIgnore]
+        [RequestResponseProperty]
         public  string SessionToken
         {
             get { return getParameterValue<string>("session_token") ?? string.Empty; }
             set { setParameter("session_token", value); }
         }
         [Newtonsoft.Json.JsonIgnore]
-        public required bool IsRequest
+        public required override bool IsRequest
         {
             get
             {
@@ -42,6 +47,7 @@ namespace TransferDataTypes.Messages
             }
         }
         [Newtonsoft.Json.JsonIgnore]
+        [ResponseProperty]
         public CreateAccountResult CreateResult
         {
             get 
@@ -74,35 +80,25 @@ namespace TransferDataTypes.Messages
         }
         private static CheckResult checkIdentity(TMMessage message)
         {
-            string? username = message.getParameterValue<string>("username");
-            string? password = message.getParameterValue<string>("password");
-            string? email = message.getParameterValue<string>("email");
-            string? sessionToken = message.getParameterValue<string>("session_token");
-            CreateAccountResult createResult = message.getParameterValue<CreateAccountResult>("create_result");
+            CheckPropertyResult<string> username = getPropertyValue<string, CreateAccountMessage>("Username", "username", message);
+            CheckPropertyResult<string> password = getPropertyValue<string, CreateAccountMessage>("Password", "password", message);
+            CheckPropertyResult<string> email = getPropertyValue<string, CreateAccountMessage>("Email", "email", message);
+            CheckPropertyResult<string> sessionToken = getPropertyValue<string, CreateAccountMessage>("SessionToken", "session_token", message);
+            CheckPropertyResult<CreateAccountResult> createResult = getPropertyValue<CreateAccountResult, CreateAccountMessage>("CreateResult", "create_result", message);
             bool? isrequest = null;
             string? c = message.getParameterValue<string>("request");
             if (c is not null && c == "create_account") isrequest = true;
             c = message.getParameterValue<string>("response");
             if (c is not null && c == "create_account") isrequest = false;
-            bool resultCheck = false;
-            if(isrequest == true)
-            {
-                resultCheck = true;
-            }
-            else
-            {
-                if(createResult == CreateAccountResult.None)resultCheck= false;
-                else resultCheck = true;
-            }
             return new CheckResult()
             {
-                Username = username ?? string.Empty,
-                Password = password ?? string.Empty,
-                Email = email ?? string.Empty,
-                SessionToken = sessionToken ?? string.Empty,
+                Username = username.Property ?? string.Empty,
+                Password = password.Property ?? string.Empty,
+                Email = email.Property ?? string.Empty,
+                SessionToken = sessionToken.Property ?? string.Empty,
                 IsRequest = isrequest ?? false,
-                CreateResult = createResult,
-                CheckSucess = username is not null && password is not null && email is not null && sessionToken is not null && isrequest is not null && resultCheck
+                CreateResult = createResult.Property,
+                CheckSucess = username.Success && password.Success && email.Success && sessionToken.Success && createResult.Success && isrequest is not null
             };
         }
         public static CreateAccountMessage? TryParse(TMMessage message)

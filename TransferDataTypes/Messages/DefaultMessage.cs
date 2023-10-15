@@ -8,6 +8,19 @@ namespace TransferDataTypes.Messages
 {
     public class DefaultMessage :TMMessage
     {
+        public required override bool IsRequest
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(getParameterValue<string>("request"));
+            }
+            set
+            {
+                if (value) setParameter("request", string.Empty);
+                else setParameter("response", string.Empty);
+
+            }
+        }
         public void SetParameter(string parameterName, object value)
         {
             setParameter(parameterName, value);
@@ -18,7 +31,7 @@ namespace TransferDataTypes.Messages
         }
         public static DefaultMessage Parse(TMMessage message)
         {
-            DefaultMessage result = new DefaultMessage();
+            DefaultMessage result = new DefaultMessage() { IsRequest=false};
             foreach (var p in message.parameters)
             {
                 result.setParameter(p.Key, p.Value);

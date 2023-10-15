@@ -10,8 +10,6 @@ namespace TMServer
         private readonly Random random = new Random();
         private Dictionary<ConnectionType, IConnectionListener> listeners = new Dictionary<ConnectionType, IConnectionListener>();
         private List<ProcessingExecutor> processingExecutors = new List<ProcessingExecutor>();
-
-
         public Server()
         {
 
@@ -65,7 +63,7 @@ namespace TMServer
             }
             catch
             {
-                //response = new TMMessage();
+                response = new DefaultMessage() { IsRequest=false};
             }
             return response;
         }
