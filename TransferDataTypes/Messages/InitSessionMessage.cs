@@ -3,43 +3,43 @@ using TransferDataTypes.Results;
 
 namespace TransferDataTypes.Messages
 {
-    public class CheckSessionMessage :TMMessage
+    public class InitSessionMessage :TMMessage
     {
         [Newtonsoft.Json.JsonIgnore]
         [RequestProperty]
         public string SessionToken
         {
-            get { return getParameterValue<string>("session_token") ?? string.Empty; }
-            set { setParameter("session_token", value); }
+            get { return this.getParameterValue<string>("session_token") ?? string.Empty; }
+            set { this.setParameter("session_token", value); }
         }
         [Newtonsoft.Json.JsonIgnore]
         public required override bool IsRequest
         {
             get
             {
-                return !string.IsNullOrEmpty(getParameterValue<string>("request"));
+                return !string.IsNullOrEmpty(this.getParameterValue<string>("request"));
             }
             set
             {
-                if (value) setParameter("request", "check_session_token");
-                else setParameter("response", "check_session_token");
+                if (value) this.setParameter("request", "check_session_token");
+                else this.setParameter("response", "check_session_token");
 
             }
         }
         [Newtonsoft.Json.JsonIgnore]
         [ResponseProperty]
-        public CheckSessionResult CheckTokenResult
+        public InitSessionResult CheckTokenResult
         {
             get
             {
-                if (!IsRequest) return getParameterValue<CheckSessionResult>("check_result");
-                else return CheckSessionResult.None;
+                if (!IsRequest) return this.getParameterValue<InitSessionResult>("check_result");
+                else return InitSessionResult.None;
 
             }
             set
             {
-                if (!IsRequest) setParameter("check_result", value);
-                else setParameter("check_result", CheckSessionResult.None);
+                if (!IsRequest) this.setParameter("check_result", value);
+                else this.setParameter("check_result", InitSessionResult.None);
             }
         }
         public static new LogoutMessage? Deserialize(string text)
@@ -51,14 +51,14 @@ namespace TransferDataTypes.Messages
         {
             public CheckResult() { }
             public string SessionToken { get; init; } = string.Empty;
-            public CheckSessionResult CheckTokenResult { get; init; } = CheckSessionResult.None;
+            public InitSessionResult CheckTokenResult { get; init; } = InitSessionResult.None;
             public bool IsRequest { get; init; }
             public bool CheckSucess { get; init; } = false;
         }
         private static CheckResult checkIdentity(TMMessage message)
         {
             CheckPropertyResult<string> sessionToken = getPropertyValue<string, LogoutMessage>("SessionToken", "session_token", message);
-            CheckPropertyResult<CheckSessionResult> checkResult = getPropertyValue<CheckSessionResult, CheckSessionMessage>("CheckTokenResult", "check_result", message);
+            CheckPropertyResult<InitSessionResult> checkResult = getPropertyValue<InitSessionResult, InitSessionMessage>("CheckTokenResult", "check_result", message);
             bool? isrequest = null;
             string? c = message.getParameterValue<string>("request");
             if (c is not null && c == "check_session_token") isrequest = true;
@@ -72,12 +72,12 @@ namespace TransferDataTypes.Messages
                 CheckSucess = sessionToken.Success && checkResult.Success && isrequest is not null
             };
         }
-        public static CheckSessionMessage? TryParse(TMMessage message)
+        public static InitSessionMessage? TryParse(TMMessage message)
         {
             CheckResult check = checkIdentity(message);
             if (check.CheckSucess)
             {
-                CheckSessionMessage m = new CheckSessionMessage()
+                InitSessionMessage m = new InitSessionMessage()
                 {
                     IsRequest = check.IsRequest,
                     SessionToken = check.SessionToken,

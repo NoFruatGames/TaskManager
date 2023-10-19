@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TransferDataTypes;
+﻿using TransferDataTypes;
 
 namespace TMServer.ConnectionTools.Connections
 {
@@ -11,7 +6,7 @@ namespace TMServer.ConnectionTools.Connections
     {
         public bool IsConnected { get; }
         public event Action<IConnection>? ClientDisconnected;
-
+        public string Id { get; }
 
         string GetRemoteHost();
         int GetRemotePort();

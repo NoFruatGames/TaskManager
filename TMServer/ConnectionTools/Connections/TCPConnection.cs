@@ -8,6 +8,7 @@ namespace TMServer.ConnectionTools.Connections
     {
         public bool IsConnected { get; private set; } = true;
         public event Action<IConnection>? ClientDisconnected;
+        public string Id { get; } = Guid.NewGuid().ToString();
 
         private TcpClient Connection { get; init; }
         private StreamReader Reader { get; init; }

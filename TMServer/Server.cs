@@ -9,10 +9,9 @@ namespace TMServer
     {
         private readonly Random random = new Random();
         private Dictionary<ConnectionType, IConnectionListener> listeners = new Dictionary<ConnectionType, IConnectionListener>();
-        private List<ProcessingExecutor> processingExecutors = new List<ProcessingExecutor>();
+
         public Server()
         {
-
         }
         public void RegisterListener(ConnectionType type, string host, int port)
         {
@@ -48,17 +47,16 @@ namespace TMServer
         {
             Console.WriteLine($"Connection opened with {obj.GetRemoteHost()}:{obj.GetRemotePort()}");
             ProcessingExecutor executor = new ProcessingExecutor(obj, new(processRequest));
-            processingExecutors.Add(executor);
             Thread executeThread= new Thread(executor.Execute);
             executeThread.Start();
         }
-        private TMMessage processRequest(TMMessage request)
+        private TMMessage processRequest(TMMessage request, IConnection sender)
         {
             Console.WriteLine(request);
             TMMessage response = null!;
             try
             {
-                RequestExecutor executor = new RequestExecutor(request);
+                RequestExecutor executor = new RequestExecutor(request, sender);
                 response = executor.Execute();
             }
             catch

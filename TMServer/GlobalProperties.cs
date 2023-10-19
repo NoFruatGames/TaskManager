@@ -1,10 +1,20 @@
-﻿using TMServer.RequestsProcessing.SessionSystem.SessionManagers;
+﻿using TMServer.Data;
+using TMServer.RequestsProcessing.SessionSystem.SessionManagers;
 
 namespace TMServer
 {
     internal static class GlobalProperties
     {
-        public static readonly Random random = new Random();
-        public static readonly ISessionManager sessionManager = new SessionManager();
+        public static Random random;
+        public static Profiles profiles;
+        public static ISessionManager sessionManager;
+
+        static GlobalProperties()
+        {
+            random = new Random();
+            profiles = new Profiles();
+            sessionManager = new SessionManager();
+
+        }
     }
 }

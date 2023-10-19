@@ -5,7 +5,7 @@ namespace TMServer.RequestsProcessing.ProcessingStrategies
 {
     internal interface IProcessingStrategy
     {
-        delegate TMMessage ProcessingDelegate (TMMessage request);
+        delegate TMMessage ProcessingDelegate (TMMessage request, IConnection sender);
         void ExecuteProcessing(IConnection connection);
         Task ExecuteProcessingAsync(IConnection connection);
     }

@@ -8,40 +8,33 @@ namespace TransferDataTypes.Messages
         [RequestProperty]
         public string Username
         {
-            get { return getParameterValue<string>("username") ?? string.Empty; }
-            set { setParameter("username", value); }
+            get { return this.getParameterValue<string>("username") ?? string.Empty; }
+            set { this.setParameter("username", value); }
         }
         [Newtonsoft.Json.JsonIgnore]
         [RequestProperty]
         public string Password
         {
-            get { return getParameterValue<string>("password") ?? string.Empty; }
-            set { setParameter("password", value); }
+            get { return this.getParameterValue<string>("password") ?? string.Empty; }
+            set { this.setParameter("password", value); }
         }
         [RequestProperty]
         [Newtonsoft.Json.JsonIgnore]
         public string Email
         {
-            get { return getParameterValue<string>("email") ?? string.Empty; }
-            set { setParameter("email", value); }
-        }
-        [Newtonsoft.Json.JsonIgnore]
-        [RequestResponseProperty]
-        public  string SessionToken
-        {
-            get { return getParameterValue<string>("session_token") ?? string.Empty; }
-            set { setParameter("session_token", value); }
+            get { return this.getParameterValue<string>("email") ?? string.Empty; }
+            set { this.setParameter("email", value); }
         }
         [Newtonsoft.Json.JsonIgnore]
         public required override bool IsRequest
         {
             get
             {
-                return !string.IsNullOrEmpty(getParameterValue<string>("request"));
+                return !string.IsNullOrEmpty(this.getParameterValue<string>("request"));
             }
             set
             {
-                if (value) setParameter("request", "create_account");
+                if (value) this.setParameter("request", "create_account");
                 else setParameter("response", "create_account");
 
             }
@@ -73,7 +66,6 @@ namespace TransferDataTypes.Messages
             public string Username { get; init; } = string.Empty;
             public string Password { get; init; } = string.Empty;
             public string Email { get; init; } = string.Empty;
-            public string SessionToken { get; init; } = string.Empty;
             public bool IsRequest { get; init; }
             public CreateAccountResult CreateResult { get; init; } = CreateAccountResult.None;
             public bool CheckSucess { get; init; } = false;
@@ -83,7 +75,6 @@ namespace TransferDataTypes.Messages
             CheckPropertyResult<string> username = getPropertyValue<string, CreateAccountMessage>("Username", "username", message);
             CheckPropertyResult<string> password = getPropertyValue<string, CreateAccountMessage>("Password", "password", message);
             CheckPropertyResult<string> email = getPropertyValue<string, CreateAccountMessage>("Email", "email", message);
-            CheckPropertyResult<string> sessionToken = getPropertyValue<string, CreateAccountMessage>("SessionToken", "session_token", message);
             CheckPropertyResult<CreateAccountResult> createResult = getPropertyValue<CreateAccountResult, CreateAccountMessage>("CreateResult", "create_result", message);
             bool? isrequest = null;
             string? c = message.getParameterValue<string>("request");
@@ -95,10 +86,9 @@ namespace TransferDataTypes.Messages
                 Username = username.Property ?? string.Empty,
                 Password = password.Property ?? string.Empty,
                 Email = email.Property ?? string.Empty,
-                SessionToken = sessionToken.Property ?? string.Empty,
                 IsRequest = isrequest ?? false,
                 CreateResult = createResult.Property,
-                CheckSucess = username.Success && password.Success && email.Success && sessionToken.Success && createResult.Success && isrequest is not null
+                CheckSucess = username.Success && password.Success && email.Success && createResult.Success && isrequest is not null
             };
         }
         public static CreateAccountMessage? TryParse(TMMessage message)
@@ -112,7 +102,6 @@ namespace TransferDataTypes.Messages
                     Password = check.Password,
                     Username = check.Username,
                     IsRequest = check.IsRequest,
-                    SessionToken = check.SessionToken,
                     CreateResult = check.CreateResult
                 };
                 return m;

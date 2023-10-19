@@ -3,13 +3,30 @@
     internal class Profiles
     {
         private readonly List<Profile> profiles = new List<Profile>();
+        public int Count { get { return profiles.Count; } }
         public CanAddProfile Add(Profile profile)
         {
             CanAddProfile check = CannAddCheck(profile);
             if(check == CanAddProfile.Success)
+            {
                 profiles.Add(profile);
+                ProfileAdded?.Invoke(profile);
+            }
+
             return check;
         }
+        public event Action<Profile>? ProfileDeleated;
+        public event Action<Profile>? ProfileAdded;
+        public bool Remove(Profile profile)
+        {
+            if (profiles.Remove(profile))
+            {
+                ProfileDeleated?.Invoke(profile);
+                return true;
+            }
+            return false;
+        }
+
         public Profile? this[int id]
         {
             get

@@ -30,7 +30,7 @@ try
             string? login = Console.ReadLine();
             Console.Write("Password: ");
             string? password = Console.ReadLine();
-            _ = Task.Run(() => server.LoginToAccount(new Profile() { Username = login, Password = password,}));
+            _ = Task.Run(() => server.LoginToAccount(login, password));
         }
         else if(num == 3)
         {

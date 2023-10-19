@@ -9,20 +9,20 @@ namespace TransferDataTypes.Messages
         [RequestProperty]
         public string SessionToken
         {
-            get { return getParameterValue<string>("session_token") ?? string.Empty; }
-            set { setParameter("session_token", value); }
+            get { return this.getParameterValue<string>("session_token") ?? string.Empty; }
+            set { this.setParameter("session_token", value); }
         }
         [Newtonsoft.Json.JsonIgnore]
         public required override bool IsRequest
         {
             get
             {
-                return !string.IsNullOrEmpty(getParameterValue<string>("request"));
+                return !string.IsNullOrEmpty(this.getParameterValue<string>("request"));
             }
             set
             {
-                if (value) setParameter("request", "logout");
-                else setParameter("response", "logout");
+                if (value) this.setParameter("request", "logout");
+                else this.setParameter("response", "logout");
 
             }
         }
@@ -32,14 +32,14 @@ namespace TransferDataTypes.Messages
         {
             get
             {
-                if (!IsRequest) return getParameterValue<LogoutResult>("logout_result");
+                if (!IsRequest) return this.getParameterValue<LogoutResult>("logout_result");
                 else return LogoutResult.None;
 
             }
             set
             {
-                if (!IsRequest) setParameter("logout_result", value);
-                else setParameter("logout_result", LogoutResult.None);
+                if (!IsRequest) this.setParameter("logout_result", value);
+                else this.setParameter("logout_result", LogoutResult.None);
             }
         }
         public static new LogoutMessage? Deserialize(string text)

@@ -19,7 +19,7 @@ namespace TMServer.RequestsProcessing.ProcessingStrategies
             {
                 request = connection.GetMessage();
                 if (request is null) continue;
-                response = ProcessRequest(request);
+                response = ProcessRequest(request, connection);
                 connection.SendMessage(response);
             }
             Console.WriteLine("connection closed");
@@ -33,7 +33,7 @@ namespace TMServer.RequestsProcessing.ProcessingStrategies
             {
                 request = await connection.GetMessageAsync();
                 if (request is null) continue;
-                response = ProcessRequest(request);
+                response = ProcessRequest(request, connection);
                 await connection.SendMessageAsync(response);
             }
             Console.WriteLine("connection closed");

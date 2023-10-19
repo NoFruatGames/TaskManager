@@ -1,4 +1,5 @@
-﻿using TMServer.RequestsProcessing.RequestsProcessors;
+﻿using TMServer.ConnectionTools.Connections;
+using TMServer.RequestsProcessing.RequestsProcessors;
 using TransferDataTypes;
 using TransferDataTypes.Messages;
 namespace TMServer.RequestsProcessing
@@ -7,15 +8,17 @@ namespace TMServer.RequestsProcessing
     {
         private IRequestProcessor? processor = null;
         private TMMessage request;
-        public RequestExecutor(TMMessage request)
+        public RequestExecutor(TMMessage request, IConnection sender)
         {
             this.request = request;
             if (CreateAccountMessage.IsIdentity(request))
                 processor = new CreateAccountRequestProcessor();
             else if(LogoutMessage.IsIdentity(request))
                 processor = new LogoutRequestProcessor();
-            else if (CheckSessionMessage.IsIdentity(request))
-                processor = new CheckSessionRequestProcessor();
+            else if (InitSessionMessage.IsIdentity(request))
+                processor = new InitSessionRequestProcessor(sender);
+            else if(LoginMessage.IsIdentity(request))
+                processor = new LoginRequestProcessor(sender);
         }
         public TMMessage Execute()
         {
