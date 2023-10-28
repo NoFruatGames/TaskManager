@@ -35,6 +35,7 @@ namespace TMServer.RequestsProcessing.RequestsProcessors
             }
             session.Connection = sender;
             response.SessionToken = session.SessionToken;
+            response.LoginResult = LoginResult.Success;
             return response;
         }
         public async Task<TMMessage> ProcessAsync(TMMessage request)

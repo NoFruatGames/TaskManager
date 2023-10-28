@@ -45,14 +45,14 @@ namespace TransferDataTypes.Messages
         {
             get 
             {
-                if (!IsRequest) return getParameterValue<CreateAccountResult>("create_result");
+                if (!IsRequest) return this.getParameterValue<CreateAccountResult>("create_result");
                 else return CreateAccountResult.None;
 
             }
             set
             {
-                if (!IsRequest) setParameter("create_result", value);
-                else setParameter("create_result", CreateAccountResult.None);
+                if (!IsRequest) this.setParameter("create_result", value);
+                else this.setParameter("create_result", CreateAccountResult.None);
             }
         }
         public static new CreateAccountMessage? Deserialize(string text)
