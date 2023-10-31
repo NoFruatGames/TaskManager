@@ -13,7 +13,7 @@ namespace TMServerLinker
         private string? DataFolder { get; init; }
         private string? sessionKey = null;
         public bool Autorized { get; private set; } = false;
-
+        public bool IsConnected { get { return connection.IsConnected; } }
 
         private bool MessageExecuting = false;
 
@@ -28,11 +28,14 @@ namespace TMServerLinker
             connectionThread.Name = "connection thread";
             connectionThread.Start();
         }
+
+
         private void HandleReceivedMessage(TMMessage obj)
         {
             Console.WriteLine(obj);
             if (InitSessionMessage.IsIdentity(obj))
             {
+                MessageExecuting = false;
                 InitSessionMessage? message = InitSessionMessage.TryParse(obj);
                 if (message is not null && message.CheckTokenResult == InitSessionResult.Success)
                 {
@@ -104,13 +107,14 @@ namespace TMServerLinker
                 SessionToken = string.IsNullOrEmpty(sessionKey) ? "none" : sessionKey
             };
             connection.AddMessageToQueue(check);
-            MessageExecuting = false;
+            MessageExecuting = true;
         }
 
         public void Dispose()
         {
             try
             {
+                connection.NeedToReconnect = false;
                 connection.Dispose();
             }
             catch { }
@@ -119,6 +123,7 @@ namespace TMServerLinker
         public async Task<RegisterResult> RegisterAccount(Profile profile)
         {
             if (MessageExecuting || Autorized) return RegisterResult.None;
+            if (!IsConnected) return RegisterResult.ServerNotAviliable;
             CreateAccountMessage request = new CreateAccountMessage() 
             {
                 Username = profile.Username,
@@ -132,6 +137,7 @@ namespace TMServerLinker
             Action<TMMessage>? messageReceivedHandler = null;
             messageReceivedHandler = (response) =>
             {
+                if (!IsConnected) { connection.MessageRecived -= messageReceivedHandler; tcs.TrySetCanceled(); };
                 if (CreateAccountMessage.IsIdentity(response))
                 {
                     CreateAccountMessage? registerMessage = CreateAccountMessage.TryParse(response);
@@ -148,12 +154,20 @@ namespace TMServerLinker
                 }
             };
             connection.MessageRecived += messageReceivedHandler;
-
-            return await tcs.Task;
+            try
+            {
+                return await tcs.Task;
+            }
+            catch (TaskCanceledException)
+            {
+                return RegisterResult.ServerNotAviliable;
+            }
+            
         }
         public async Task<Results.LoginResult> LoginToAccount(string username, string password)
         {
             if (MessageExecuting || Autorized) return Results.LoginResult.None;
+            if (!IsConnected) return Results.LoginResult.ServerNotAviliable;
             LoginMessage message = new LoginMessage()
             {
                 IsRequest = true,
@@ -166,6 +180,7 @@ namespace TMServerLinker
             Action<TMMessage>? messageReceivedHandler = null;
             messageReceivedHandler = (response) =>
             {
+                if (!IsConnected) { connection.MessageRecived -= messageReceivedHandler; tcs.TrySetCanceled(); };
                 if (LoginMessage.IsIdentity(response))
                 {
                     LoginMessage? loginMessage = LoginMessage.TryParse(response);
@@ -193,11 +208,18 @@ namespace TMServerLinker
                 }
             };
             connection.MessageRecived += messageReceivedHandler;
-            return await tcs.Task;
+            try
+            {
+                return await tcs.Task;
+            }catch(TaskCanceledException)
+            {
+                return Results.LoginResult.ServerNotAviliable;
+            }
+
         }
         public async Task<bool> Logout()
         {
-            if(MessageExecuting || !Autorized) return false;
+            if(MessageExecuting || !Autorized || !IsConnected) return false;
             LogoutMessage message = new LogoutMessage()
             { 
                 SessionToken =  string.IsNullOrEmpty(sessionKey)?"none":sessionKey,
@@ -209,6 +231,7 @@ namespace TMServerLinker
             Action<TMMessage>? messageReceivedHandler = null;
             messageReceivedHandler = (response) =>
             {
+                if (!IsConnected) { connection.MessageRecived -= messageReceivedHandler; tcs.SetCanceled(); };
                 if (LogoutMessage.IsIdentity(response))
                 {
                     sessionKey = string.Empty;

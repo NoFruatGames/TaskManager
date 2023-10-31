@@ -46,8 +46,9 @@ namespace TMServer.ConnectionTools.Connections
                 do
                 {
                     text = Reader.ReadLine();
+                    if(text is null) ClientDisconnected?.Invoke(this);
                     message = TMMessage.Deserialize(text ?? string.Empty);
-                } while (message is null);
+                } while (message is null && IsConnected);
 
                 return message;
             }

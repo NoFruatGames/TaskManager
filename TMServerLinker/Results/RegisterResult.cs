@@ -2,6 +2,6 @@
 {
     public enum RegisterResult
     {
-        None, Success, UsernameExist
+        None, ServerNotAviliable, Success, UsernameExist
     }
 }

@@ -14,6 +14,7 @@ namespace TMServerLinker.ConnectionHandlers
         internal abstract event Action<TMMessage>? MessageRecived;
         internal abstract event Action? OnConnectionOpened;
         internal abstract event Action? OnConnectionClosed;
+        internal bool NeedToReconnect { get; set; } = true;
 
         public bool IsConnected { get; protected set; }
 

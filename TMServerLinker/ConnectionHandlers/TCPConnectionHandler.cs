@@ -5,8 +5,7 @@ namespace TMServerLinker.ConnectionHandlers
 {
     public class TCPConnectionHandler : ConnectionHandler
     {
-        private TcpClient? Server { get; set; }
-        private NetworkStream Stream { get; set; } = null!;
+        private TcpClient Server { get; set; } = null!;
         private StreamWriter Writer { get; set; } = null!;
         private StreamReader Reader { get; set; } = null!;
 
@@ -16,24 +15,22 @@ namespace TMServerLinker.ConnectionHandlers
 
         public TCPConnectionHandler(string serverHost = "192.168.0.129", int serverPort = 4980) : base(serverHost, serverPort)
         {
-
+            
         }
 
         internal override async Task ConnectToServerAsync()
         {
-            while (true)
+            while (NeedToReconnect)
             {
                 try
                 {
-                    if (Server != null && Server.Connected == true && IsConnected == true) continue;
+                    if (Server is not null && Server.Connected == true && IsConnected == true) continue;
                     Dispose();
-                    IsConnected = false;
-                    OnConnectionClosed?.Invoke();
                     Server = new TcpClient();
+                    OnConnectionClosed?.Invoke();
                     await Server.ConnectAsync(ServerHost, ServerPort);
                     lock (locker)
                     {
-                        Stream = Server.GetStream();
                         Writer = new StreamWriter(Server.GetStream());
                         Reader = new StreamReader(Server.GetStream());
                         IsConnected = true;
@@ -49,16 +46,16 @@ namespace TMServerLinker.ConnectionHandlers
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Connection failed: {ex.Message}");
-                    Dispose();
                     await Task.Delay(TimeSpan.FromSeconds(5)); // Пауза перед повторной попыткой подключения
                 }
             }
+            Dispose();
         }
         private async Task StartReceivingDataAsync()
         {
             try
             {
-                while (true)
+                while (IsConnected)
                 {
                     string? json = await Reader.ReadLineAsync();
                     TMMessage? message = TMMessage.Deserialize(json ?? string.Empty);
@@ -76,14 +73,15 @@ namespace TMServerLinker.ConnectionHandlers
             {
                 while (IsConnected)
                 {
-                    if(Requests.Count - 1 >= 0)
+                    if (Requests.Count - 1 >= 0)
                     {
                         TMMessage request = Requests.Dequeue();
                         await Writer.WriteLineAsync(request.Serialize());
                         await Writer.FlushAsync();
                     }
                 }
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine($"sending to server error: {ex.Message}");
             }
@@ -98,10 +96,9 @@ namespace TMServerLinker.ConnectionHandlers
             {
                 lock (locker)
                 {
+                    IsConnected = false;
                     Server?.Close();
                     Server?.Dispose();
-                    Stream?.Close();
-                    Stream?.Dispose();
                     Writer?.Close();
                     Writer?.Dispose();
                     Reader?.Close();

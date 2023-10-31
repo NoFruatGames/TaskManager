@@ -2,6 +2,6 @@
 {
     public enum LoginResult
     {
-        None, Success, WrongLogin, WrongPassword
+        None, ServerNotAviliable, Success, WrongLogin, WrongPassword
     }
 }
