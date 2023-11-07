@@ -1,5 +1,6 @@
-﻿using System.Windows;
-using TMServerLinker;
+﻿using System.Threading.Tasks;
+using System;
+using System.Windows;
 using TMServerLinker.Results;
 namespace TMClient
 {
@@ -8,14 +9,11 @@ namespace TMClient
     /// </summary>
     public partial class AuthorizationWindow : Window
     {
-        TMServerLinker.TMClient client = null!;
-        public AuthorizationWindow()
+        ConnectionManager connectionManager = null!;
+        public AuthorizationWindow(ConnectionManager connectionManager)
         {
-            InitializeComponent();
-        }
-        public AuthorizationWindow(TMServerLinker.TMClient client)
-        {
-            this.client = client;
+            this.connectionManager = connectionManager;
+            this.connectionManager.RegisterDefaultClosing(this);
             InitializeComponent();
         }
 
@@ -30,21 +28,38 @@ namespace TMClient
                 EmptyPasswordLabel.Visibility = Visibility.Visible;
             }
             if (string.IsNullOrEmpty(PasswordTextBox.Text) || string.IsNullOrEmpty(UsernameTextBox.Text)) return;
-            var result = await client.LoginToAccount(UsernameTextBox.Text, PasswordTextBox.Text);
-            if(result == LoginResult.ServerNotAviliable)
+            var result = await connectionManager.Client.LoginToAccount(UsernameTextBox.Text, PasswordTextBox.Text);
+            if (result.LoginStatus == LoginStatus.ServerNotAviliable)
             {
                 LoginStatusLabel.Content = "Server is not available";
                 LoginStatusLabel.Visibility = Visibility.Visible;
             }
-            else if(result == LoginResult.WrongLogin)
+            else if (result.LoginStatus == LoginStatus.WrongLogin)
             {
                 LoginStatusLabel.Content = "Username not found";
                 LoginStatusLabel.Visibility = Visibility.Visible;
             }
-            else if( result == LoginResult.WrongPassword)
+            else if (result.LoginStatus == LoginStatus.WrongPassword)
             {
                 LoginStatusLabel.Content = "Wrong password";
                 LoginStatusLabel.Visibility = Visibility.Visible;
+            }
+            else if (result.LoginStatus == LoginStatus.Success)
+            {
+                Global.SessionToken = result.SessionToken;
+                Global.RememberSession = RememberCB.IsChecked ?? false;
+                if (RememberCB.IsChecked == true)
+                    Global.SaveSessionKeyToFile(Global.SessionToken);
+                else
+                {
+                    connectionManager.UnregisterDefaultClosing(this);
+                    connectionManager.RegisterWithClosingSession(this, Global.SessionToken);
+                }
+                connectionManager.UnregisterDefaultClosing(this);
+                connectionManager.UnRegisterWithClosingSession(this);
+                WorkWindow workWindow = new WorkWindow(connectionManager);
+                workWindow.Show();
+                this.Close();
             }
 
         }
@@ -61,7 +76,9 @@ namespace TMClient
 
         private void RegistrationButton_Click(object sender, RoutedEventArgs e)
         {
-            RegistrationWindow registrationWindow = new RegistrationWindow(client);
+            connectionManager.UnregisterDefaultClosing(this);
+            connectionManager.UnRegisterWithClosingSession(this);
+            RegistrationWindow registrationWindow = new RegistrationWindow(connectionManager);
             registrationWindow.Show();
             this.Close();
         }

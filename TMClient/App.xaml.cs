@@ -1,6 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Windows;
+﻿using System.Windows;
+using TMServerLinker.Results;
 namespace TMClient
 {
     /// <summary>
@@ -8,25 +7,40 @@ namespace TMClient
     /// </summary>
     public partial class App : Application
     {
-        TMServerLinker.TMClient client;
-        protected override void OnStartup(StartupEventArgs e)
-        {
-            base.OnStartup(e);
-            AuthorizationWindow mainWindow = new AuthorizationWindow(client);
-            mainWindow.Show();
-        }
+        ConnectionManager connectionManager;
+
         public App()
         {
-            Exit += App_Exit;
-            client = new TMServerLinker.TMClient
-            (
-                new TMServerLinker.ConnectionHandlers.TCPConnectionHandler("192.168.0.129", 4980),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NoFruatINC", "TaskManager", "Client")
-            );
+            connectionManager = new ConnectionManager(new TMServerLinker.ConnectionHandlers.TCPConnectionHandler("192.168.0.129", 4980));
         }
-        private void App_Exit(object sender, ExitEventArgs e)
+        protected override  async void OnStartup(StartupEventArgs e)
         {
-            if (client is not null) client.Dispose();
+            base.OnStartup(e);
+
+            Global.SessionToken = Global.GetSessionKeyFromFile();
+            var result = await connectionManager.Client.InitSession(Global.SessionToken);
+            if(result == InitSessionResult.Success)
+            {
+                Global.RememberSession = true;
+                WorkWindow workWindow = new WorkWindow(connectionManager);
+                workWindow.Show();
+            }
+            else if(result == InitSessionResult.TokenAlreadyUsing)
+            {
+                MessageBox.Show("another application instance is already running");
+                connectionManager.Dispose();
+                Application.Current.Shutdown();
+            }
+            else
+            {
+                Global.SessionToken = string.Empty;
+                Global.SaveSessionKeyToFile(string.Empty);
+                AuthorizationWindow mainWindow = new AuthorizationWindow(connectionManager);
+                mainWindow.Show();
+            }
+            
         }
+
+
     }
 }

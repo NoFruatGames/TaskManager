@@ -11,7 +11,6 @@ namespace TMServerLinker
 
         private static int requestId;
         private string? DataFolder { get; init; }
-        private string? sessionKey = null;
         public bool Autorized { get; private set; } = false;
         public bool IsConnected { get { return connection.IsConnected; } }
 
@@ -19,7 +18,7 @@ namespace TMServerLinker
 
 
 
-        private TMClient(ConnectionHandler connection)
+        public TMClient(ConnectionHandler connection)
         {
             this.connection = connection;
             connection.MessageRecived += HandleReceivedMessage;
@@ -33,81 +32,11 @@ namespace TMServerLinker
         private void HandleReceivedMessage(TMMessage obj)
         {
             Console.WriteLine(obj);
-            if (InitSessionMessage.IsIdentity(obj))
-            {
-                MessageExecuting = false;
-                InitSessionMessage? message = InitSessionMessage.TryParse(obj);
-                if (message is not null && message.CheckTokenResult == InitSessionResult.Success)
-                {
-                    Autorized = true;
-                }
-                else
-                {
-                    Autorized = false;
-                    sessionKey = string.Empty;
-                    SaveSessionKeyToFile();
-                }
-
-            }
         }
-
-        public TMClient(ConnectionHandler connection, string dataFolder) : this(connection)
-        {
-            DataFolder = dataFolder;
-        }
-
-        private void GetSessionKeyFromFile()
-        {
-            if (DataFolder == null) return;
-            try
-            {
-                Directory.CreateDirectory(DataFolder);
-                string file = Path.Combine(DataFolder, "session.key");
-                using (var stream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.Read))
-                {
-                    using (var reader = new StreamReader(stream))
-                    {
-                        sessionKey = reader.ReadToEnd();
-                        sessionKey = sessionKey.Trim();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Read session key error: {ex}");
-            }
-        }
-        private void SaveSessionKeyToFile()
-        {
-            if (DataFolder == null) return;
-            try
-            {
-                Directory.CreateDirectory(DataFolder);
-                string file = Path.Combine(DataFolder, "session.key");
-                using (var stream = new FileStream(file, FileMode.Create, FileAccess.Write))
-                {
-                    using (var writer = new StreamWriter(stream))
-                    {
-                        writer.WriteLine(sessionKey ?? string.Empty);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Write session key error: {ex}");
-            }
-        }
-
         private void Connection_OnConnectionOpened()
         {
-            GetSessionKeyFromFile();
-            InitSessionMessage check = new InitSessionMessage()
-            {
-                IsRequest = true,
-                SessionToken = string.IsNullOrEmpty(sessionKey) ? "none" : sessionKey
-            };
-            connection.AddMessageToQueue(check);
-            MessageExecuting = true;
+            
+            
         }
 
         public void Dispose()
@@ -120,6 +49,50 @@ namespace TMServerLinker
             catch { }
 
         }
+
+        public async Task<Results.InitSessionResult> InitSession(string sessionKey)
+        {
+            if(MessageExecuting) return Results.InitSessionResult.None;
+            if (Autorized) return Results.InitSessionResult.SessionNotClosed;
+            if (!IsConnected) return Results.InitSessionResult.ServerIsNotAviliable;
+            InitSessionMessage check = new InitSessionMessage()
+            {
+                IsRequest = true,
+                SessionToken = string.IsNullOrEmpty(sessionKey) ? "none" : sessionKey
+            };
+            MessageExecuting = true;
+            var tcs = new TaskCompletionSource<TMServerLinker.Results.InitSessionResult>();
+            Action<TMMessage> messageReceivedHandler = null!;
+            messageReceivedHandler = (response) =>
+            {
+                if(InitSessionMessage.IsIdentity(response))
+                {
+                    InitSessionMessage? initMessage = InitSessionMessage.TryParse(response);
+                    if(initMessage is null) tcs.SetResult(Results.InitSessionResult.None);
+                    else
+                    {
+                        if (initMessage.CheckTokenResult == TransferDataTypes.Results.InitSessionResult.Success)
+                        {
+                            tcs.SetResult(Results.InitSessionResult.Success);
+                            Autorized = true;
+                        }
+                        else if (initMessage.CheckTokenResult == TransferDataTypes.Results.InitSessionResult.TokenNotExist)
+                            tcs.SetResult(Results.InitSessionResult.TokenNotExist);
+                        else if (initMessage.CheckTokenResult == TransferDataTypes.Results.InitSessionResult.TokenAlreadyUsing)
+                            tcs.SetResult(Results.InitSessionResult.TokenAlreadyUsing);
+                        else
+                            tcs.SetResult(Results.InitSessionResult.None);
+                    }
+                    MessageExecuting = false;
+                    connection.MessageRecived -= messageReceivedHandler;
+                }
+            };
+            connection.MessageRecived += messageReceivedHandler;
+            connection.AddMessageToQueue(check);
+            return await tcs.Task;
+        }
+
+
         public async Task<RegisterResult> RegisterAccount(Profile profile)
         {
             if (MessageExecuting || Autorized) return RegisterResult.None;
@@ -132,7 +105,6 @@ namespace TMServerLinker
                 IsRequest=true,
             };
             MessageExecuting = true;
-            connection.AddMessageToQueue(request);
             var tcs = new TaskCompletionSource<RegisterResult>();
             Action<TMMessage>? messageReceivedHandler = null;
             messageReceivedHandler = (response) =>
@@ -154,53 +126,47 @@ namespace TMServerLinker
                 }
             };
             connection.MessageRecived += messageReceivedHandler;
-            try
-            {
-                return await tcs.Task;
-            }
-            catch (TaskCanceledException)
-            {
-                return RegisterResult.ServerNotAviliable;
-            }
-            
+            connection.AddMessageToQueue(request);
+            return await tcs.Task;
+
         }
         public async Task<Results.LoginResult> LoginToAccount(string username, string password)
         {
-            if (MessageExecuting || Autorized) return Results.LoginResult.None;
-            if (!IsConnected) return Results.LoginResult.ServerNotAviliable;
+            if (MessageExecuting) return new Results.LoginResult() { LoginStatus = LoginStatus.None, SessionToken = "" };
+            if (Autorized) return new Results.LoginResult() { LoginStatus = LoginStatus.SessionNotClosed, SessionToken = "" };
+            if (!IsConnected) return new Results.LoginResult() { LoginStatus = LoginStatus.ServerNotAviliable, SessionToken = "" };
             LoginMessage message = new LoginMessage()
             {
                 IsRequest = true,
                 Username = username,
                 Password = password
             };
-            connection.AddMessageToQueue(message);
             MessageExecuting = true;
             var tcs = new TaskCompletionSource<Results.LoginResult>();
             Action<TMMessage>? messageReceivedHandler = null;
             messageReceivedHandler = (response) =>
             {
-                if (!IsConnected) { connection.MessageRecived -= messageReceivedHandler; tcs.TrySetCanceled(); };
                 if (LoginMessage.IsIdentity(response))
                 {
                     LoginMessage? loginMessage = LoginMessage.TryParse(response);
-                    if (loginMessage is null) tcs.SetResult(Results.LoginResult.None);
+                    if (loginMessage is null) tcs.SetResult(new Results.LoginResult() { LoginStatus = LoginStatus.None, SessionToken = "" });
                     else
                     {
-                        if(loginMessage.LoginResult == TransferDataTypes.Results.LoginResult.Success)
+                        if (loginMessage.LoginResult == TransferDataTypes.Results.LoginResult.Success)
                         {
-                            sessionKey = loginMessage.SessionToken;
-                            SaveSessionKeyToFile();
-                            tcs.SetResult(Results.LoginResult.Success);
+                            Autorized = true;
+                            tcs.SetResult(new Results.LoginResult() { LoginStatus = LoginStatus.Success, SessionToken = loginMessage.SessionToken });
                         }
                         else
                         {
                             if (loginMessage.LoginResult == TransferDataTypes.Results.LoginResult.WrongUsername)
-                                tcs.SetResult(Results.LoginResult.WrongLogin);
+                                tcs.SetResult(new Results.LoginResult() { SessionToken = "", LoginStatus = LoginStatus.WrongLogin });
                             else if (loginMessage.LoginResult == TransferDataTypes.Results.LoginResult.WrongPassword)
-                                tcs.SetResult(Results.LoginResult.WrongPassword);
+                                tcs.SetResult(new Results.LoginResult() { SessionToken = "", LoginStatus = LoginStatus.WrongPassword });
+                            else if (loginMessage.LoginResult == TransferDataTypes.Results.LoginResult.CreateSessionServerError)
+                                tcs.SetResult(new Results.LoginResult() { SessionToken = "", LoginStatus = LoginStatus.CreattingSessionServerError });
                             else
-                                tcs.SetResult(Results.LoginResult.None);
+                                tcs.SetResult(new Results.LoginResult() { SessionToken = "", LoginStatus = LoginStatus.None });
                         }
                     }
                     connection.MessageRecived -= messageReceivedHandler;
@@ -208,43 +174,44 @@ namespace TMServerLinker
                 }
             };
             connection.MessageRecived += messageReceivedHandler;
-            try
-            {
-                return await tcs.Task;
-            }catch(TaskCanceledException)
-            {
-                return Results.LoginResult.ServerNotAviliable;
-            }
+            connection.AddMessageToQueue(message);
+            return await tcs.Task;
 
         }
-        public async Task<bool> Logout()
+        public async Task<ShutdownSessionResult> ShutdownSession(string sessionToken)
         {
-            if(MessageExecuting || !Autorized || !IsConnected) return false;
+            if(MessageExecuting) return ShutdownSessionResult.None;
+            if (!Autorized) return ShutdownSessionResult.NotAuthorized;
+            if (!IsConnected) return ShutdownSessionResult.ServerNotAviliable;
             LogoutMessage message = new LogoutMessage()
             { 
-                SessionToken =  string.IsNullOrEmpty(sessionKey)?"none":sessionKey,
+                SessionToken =  string.IsNullOrEmpty(sessionToken) ? "none": sessionToken,
                 IsRequest = true,
             };
-            connection.AddMessageToQueue(message);
             MessageExecuting = true;
-            var tcs = new TaskCompletionSource<bool>();
+            var tcs = new TaskCompletionSource<ShutdownSessionResult>();
             Action<TMMessage>? messageReceivedHandler = null;
             messageReceivedHandler = (response) =>
             {
-                if (!IsConnected) { connection.MessageRecived -= messageReceivedHandler; tcs.SetCanceled(); };
                 if (LogoutMessage.IsIdentity(response))
                 {
-                    sessionKey = string.Empty;
-                    SaveSessionKeyToFile();
+                    LogoutMessage? logoutMessage = LogoutMessage.TryParse(response);
+                    if(logoutMessage is not null && logoutMessage.LogoutResult == LogoutResult.Success)
+                    {
+                        tcs.SetResult(ShutdownSessionResult.Success);
+                    }
+                    else
+                    {
+                        tcs.SetResult(ShutdownSessionResult.TokenNotExist);
+                    }
                     Autorized = false;
-                    connection.MessageRecived -= messageReceivedHandler;
                     MessageExecuting = false;
-                    tcs.SetResult(true);
-
+                    connection.MessageRecived -= messageReceivedHandler;
                 }
 
             };
             connection.MessageRecived += messageReceivedHandler;
+            connection.AddMessageToQueue(message);
             return await tcs.Task;
         }
     }
